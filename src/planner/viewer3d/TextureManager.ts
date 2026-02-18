@@ -3,85 +3,120 @@ import * as THREE from 'three';
 export class TextureManager {
     loader: THREE.TextureLoader = new THREE.TextureLoader();
     idWall: number = 0;
+    materialShininess: number = 50;
+    materialColor: THREE.Color = new THREE.Color(0xffffff);
+    materialRoughness: number = 0.5;
+    materialMetalness: number = 0.0;
+    floorRepeat: THREE.Vector2 = new THREE.Vector2(0.5, 0.5);
 
-    public readPaths : {
-        id: string, 
-        for: string, 
-        path : string, 
-        type: string, 
+
+    public readPaths: {
+        id: string,
+        for: string,
+        path: string,
+        type: string,
     }[] = [];
 
-    wallTexturePath: { [id: string] : {
+    wallTexturePath: { [id: string]: {
         wallCOL: string,
         wallNRM: string,
         wallHGT: string
-    } } = {};
+    }} = {};
 
-    roofTexturePath: { [id: string] : {
+    roofTexturePath: { [id: string]: {
         roofCOL: string,
         roofNRM: string,
         roofHGT: string
-    } } = {};
+    }} = {};
 
-    windowTexturePath: {
+    // ⭐ FIX: window textures per ID
+    windowTexturePath: { [id: string]: {
         winCOL: string,
         winNRM: string,
         winHGT: string
-     } = {
-         winCOL: '',
-         winNRM: '',
-         winHGT: ''
-     };
-    groundTexturePath: {
-        groundCOL: string,
-        groundNRM: string
-    } = {
+    }} = {};
+
+    // ⭐ FIX: door frame textures per ID
+    doorFrameTexturePath: { [id: string]: {
+        dfCOL: string,
+        dfNRM: string,
+        dfHGT: string
+    }} = {};
+
+    // ⭐ FIX: door textures per ID
+    doorTexturePath: { [id: string]: {
+        doorCOL: string,
+        doorNRM: string,
+        doorHGT: string
+    }} = {};
+
+    groundTexturePath = {
         groundCOL: '',
         groundNRM: ''
     };
 
-    HDRIPath: string;
-    envMap: THREE.Texture = new THREE.Texture;
+    floorTexturePath: { [id: string]: {
+        floorCOL: string,
+        floorNRM: string,
+        floorHGT: string
+    }} = {};
 
-    wallTextureLoaded: { [id: string] : {
+    HDRIPath: string;
+    envMap: THREE.Texture = new THREE.Texture();
+
+    wallTextureLoaded: { [id: string]: {
         wallCOL: THREE.Texture,
         wallNRM: THREE.Texture,
         wallHGT: THREE.Texture
-    } } = {};
-    roofTextureLoaded: { [id: string] : {
+    }} = {};
+
+    roofTextureLoaded: { [id: string]: {
         roofCOL: THREE.Texture,
         roofNRM: THREE.Texture,
         roofHGT: THREE.Texture
-    } } = {};
+    }} = {};
 
-    windowTextureLoaded: {
+    // ⭐ FIX: window textures per ID
+    windowTextureLoaded: { [id: string]: {
         winCOL: THREE.Texture,
         winNRM: THREE.Texture,
         winHGT: THREE.Texture
-    } = {
-        winCOL: new THREE.Texture,
-        winNRM: new THREE.Texture,
-        winHGT: new THREE.Texture
+    }} = {};
+
+    // ⭐ FIX: door frame textures per ID
+    doorFrameTextureLoaded: { [id: string]: {
+        dfCOL: THREE.Texture,
+        dfNRM: THREE.Texture,
+        dfHGT: THREE.Texture
+    }} = {};
+
+    // ⭐ FIX: door textures per ID
+    doorTextureLoaded: { [id: string]: {
+        doorCOL: THREE.Texture,
+        doorNRM: THREE.Texture,
+        doorHGT: THREE.Texture
+    }} = {};
+
+    floorTextureLoaded: { [id: string]: {
+        floorCOL: THREE.Texture,
+        floorNRM: THREE.Texture,
+        floorHGT: THREE.Texture
+    }} = {};
+
+    groundTextureLoaded = {
+        groundCOL: new THREE.Texture(),
+        groundNRM: new THREE.Texture()
     };
 
-    groundTextureLoaded: {
-        groundCOL: THREE.Texture,
-        groundNRM: THREE.Texture
-    } = {
-        groundCOL: new THREE.Texture,
-        groundNRM: new THREE.Texture
-    };
     wallTextureSelected: string = "1634";
-    roofTextureSelected:string = "4683";
+    floorTextureSelected: string = "8696";
+    roofTextureSelected: string = "4683";
+    windowTextureSelected: string = "2734";
+    doorTextureSelected: string = "2734";
+    doorFrameTextureSelected: string = "2734";
 
-    
-    
-    constructor(readPaths: {id: string, for: string, path : string, type: string}[], HDRI: string) {
+    constructor(readPaths: any[], HDRI: string) {
         this.readPaths = readPaths;
-        // this.groundTextureLoaded = {
-        //     groundCOL: this.loadTexture(groundTexture.groundCOL),
-        //     groundNRM: this.loadTexture(groundTexture.groundNRM)
-        // }
         this.HDRIPath = HDRI;
     }
 
@@ -89,42 +124,137 @@ export class TextureManager {
         this.envMap = texture;
     }
 
-    createWallTexture(id: number) {
-        this.wallTexturePath[id] = {
-            wallCOL: '',
-            wallNRM: '',
-            wallHGT: ''
-        };
-        this.wallTextureLoaded[id] = {
-            wallCOL: new THREE.Texture,
-            wallNRM: new THREE.Texture,
-            wallHGT: new THREE.Texture
+    setShininess(value: number) {
+        this.materialShininess = value;
+    }
+
+    setColorTint(hexColor: string) {
+        this.materialColor = new THREE.Color(hexColor);
+    }
+
+    setRoughness(value: number) {
+        this.materialRoughness = value;
+    }
+
+    setMetalness(value: number) {
+        this.materialMetalness = value;
+    }
+
+    // ---------------------------------------------------------
+    // FLOOR / WALL / ROOF (unchanged)
+    // ---------------------------------------------------------
+
+    addFloorTexture(id: string, type: string, path: string, texture: THREE.Texture) {
+        if (!this.floorTexturePath[id]) {
+            this.floorTexturePath[id] = { floorCOL: '', floorNRM: '', floorHGT: '' };
+            this.floorTextureLoaded[id] = {
+                floorCOL: new THREE.Texture(),
+                floorNRM: new THREE.Texture(),
+                floorHGT: new THREE.Texture()
+            };
+        }
+
+        switch (type) {
+            case "COL": this.floorTexturePath[id].floorCOL = path; this.floorTextureLoaded[id].floorCOL = texture; break;
+            case "NRM": this.floorTexturePath[id].floorNRM = path; this.floorTextureLoaded[id].floorNRM = texture; break;
+            case "HGT": this.floorTexturePath[id].floorHGT = path; this.floorTextureLoaded[id].floorHGT = texture; break;
         }
     }
 
-    createRoofTexture(id: number) {
-        this.roofTexturePath[id] = {
-            roofCOL: '',
-            roofNRM: '',
-            roofHGT: ''
-        };
-        this.roofTextureLoaded[id] = {
-            roofCOL: new THREE.Texture,
-            roofNRM: new THREE.Texture,
-            roofHGT: new THREE.Texture
+    addWallTexture(id: string, type: string, path: string, texture: THREE.Texture) {
+        if (!this.wallTexturePath[id]) {
+            this.wallTexturePath[id] = { wallCOL: '', wallNRM: '', wallHGT: '' };
+            this.wallTextureLoaded[id] = {
+                wallCOL: new THREE.Texture(),
+                wallNRM: new THREE.Texture(),
+                wallHGT: new THREE.Texture()
+            };
+        }
+
+        switch (type) {
+            case "COL": this.wallTexturePath[id].wallCOL = path; this.wallTextureLoaded[id].wallCOL = texture; break;
+            case "NRM": this.wallTexturePath[id].wallNRM = path; this.wallTextureLoaded[id].wallNRM = texture; break;
+            case "HGT": this.wallTexturePath[id].wallHGT = path; this.wallTextureLoaded[id].wallHGT = texture; break;
         }
     }
 
-    createWindowTexture(id: number) {
-        this.windowTexturePath = {
-            winCOL: '',
-            winNRM: '',
-            winHGT: ''
-        };
-        this.windowTextureLoaded = {
-            winCOL: new THREE.Texture,
-            winNRM: new THREE.Texture,
-            winHGT: new THREE.Texture
+    addRoofTexture(id: string, type: string, path: string, texture: THREE.Texture) {
+        if (!this.roofTexturePath[id]) {
+            this.roofTexturePath[id] = { roofCOL: '', roofNRM: '', roofHGT: '' };
+            this.roofTextureLoaded[id] = {
+                roofCOL: new THREE.Texture(),
+                roofNRM: new THREE.Texture(),
+                roofHGT: new THREE.Texture()
+            };
+        }
+
+        switch (type) {
+            case "COL": this.roofTexturePath[id].roofCOL = path; this.roofTextureLoaded[id].roofCOL = texture; break;
+            case "NRM": this.roofTexturePath[id].roofNRM = path; this.roofTextureLoaded[id].roofNRM = texture; break;
+            case "HGT": this.roofTexturePath[id].roofHGT = path; this.roofTextureLoaded[id].roofHGT = texture; break;
+        }
+    }
+
+    // ---------------------------------------------------------
+    // ⭐ FIXED WINDOW TEXTURES (per ID)
+    // ---------------------------------------------------------
+
+    addWindowTexture(id: string, type: string, path: string, texture: THREE.Texture) {
+        if (!this.windowTexturePath[id]) {
+            this.windowTexturePath[id] = { winCOL: '', winNRM: '', winHGT: '' };
+            this.windowTextureLoaded[id] = {
+                winCOL: new THREE.Texture(),
+                winNRM: new THREE.Texture(),
+                winHGT: new THREE.Texture()
+            };
+        }
+
+        switch (type) {
+            case "COL": this.windowTexturePath[id].winCOL = path; this.windowTextureLoaded[id].winCOL = texture; break;
+            case "NRM": this.windowTexturePath[id].winNRM = path; this.windowTextureLoaded[id].winNRM = texture; break;
+            case "HGT": this.windowTexturePath[id].winHGT = path; this.windowTextureLoaded[id].winHGT = texture; break;
+        }
+    }
+
+    // ---------------------------------------------------------
+    // ⭐ FIXED DOOR FRAME TEXTURES (per ID)
+    // ---------------------------------------------------------
+
+    addDoorFrameTexture(id: string, type: string, path: string, texture: THREE.Texture) {
+        if (!this.doorFrameTexturePath[id]) {
+            this.doorFrameTexturePath[id] = { dfCOL: '', dfNRM: '', dfHGT: '' };
+            this.doorFrameTextureLoaded[id] = {
+                dfCOL: new THREE.Texture(),
+                dfNRM: new THREE.Texture(),
+                dfHGT: new THREE.Texture()
+            };
+        }
+
+        switch (type) {
+            case "COL": this.doorFrameTexturePath[id].dfCOL = path; this.doorFrameTextureLoaded[id].dfCOL = texture; break;
+            case "NRM": this.doorFrameTexturePath[id].dfNRM = path; this.doorFrameTextureLoaded[id].dfNRM = texture; break;
+            case "HGT": this.doorFrameTexturePath[id].dfHGT = path; this.doorFrameTextureLoaded[id].dfHGT = texture; break;
+        }
+    }
+
+    // ---------------------------------------------------------
+    // ⭐ FIXED DOOR TEXTURES (per ID)
+    // ---------------------------------------------------------
+
+    addDoorTexture(id: string, type: string, path: string, texture: THREE.Texture) {
+        if (!this.doorTexturePath[id]) {
+            this.doorTexturePath[id] = { doorCOL: '', doorNRM: '', doorHGT: '' };
+            this.doorTextureLoaded[id] = {
+                doorCOL: new THREE.Texture(),
+                doorNRM: new THREE.Texture(),
+                doorHGT: new THREE.Texture()
+            };
+        }
+
+        switch (type) {
+            case "COL": this.doorTexturePath[id].doorCOL = path; this.doorTextureLoaded[id].doorCOL = texture; break;
+            case "NRM": this.doorTexturePath[id].doorNRM = path; this.doorTextureLoaded[id].doorNRM = texture; break;
+            case "HGT": this.doorTexturePath[id].doorHGT = path; this.doorTextureLoaded[id].doorHGT = texture; break;
         }
     }
 
@@ -158,185 +288,17 @@ export class TextureManager {
         
     }
 
-    addWallTexture(id: string, type: string, path: string, texture: THREE.Texture) {
-        switch(type) {
-            case "COL": {
-                this.wallTexturePath[id] = {
-                    wallCOL: path,
-                    wallNRM: this.wallTexturePath[id]?this.wallTexturePath[id].wallNRM:"",
-                    wallHGT: this.wallTexturePath[id]?this.wallTexturePath[id].wallHGT:""
-                };
-        
-                this.wallTextureLoaded[id] = {
-                    wallCOL: texture,
-                    wallNRM: this.wallTextureLoaded[id]?this.wallTextureLoaded[id].wallNRM:new THREE.Texture,
-                    wallHGT: this.wallTextureLoaded[id]?this.wallTextureLoaded[id].wallHGT:new THREE.Texture
-                }
-                break;
-            }
-            case "NRM": {
-                this.wallTexturePath[id] = {
-                    wallCOL: this.wallTexturePath[id]?this.wallTexturePath[id].wallCOL:"",
-                    wallNRM: path,
-                    wallHGT: this.wallTexturePath[id]?this.wallTexturePath[id].wallHGT:""
-                };
-        
-                this.wallTextureLoaded[id] = {
-                    wallCOL: this.wallTextureLoaded[id]?this.wallTextureLoaded[id].wallCOL:new THREE.Texture,
-                    wallNRM: texture,
-                    wallHGT: this.wallTextureLoaded[id]?this.wallTextureLoaded[id].wallHGT:new THREE.Texture
-                }
-                break;
-            }
-            case "HGT":{
-                this.wallTexturePath[id] = {
-                    wallCOL: this.wallTexturePath[id]?this.wallTexturePath[id].wallCOL:"",
-                    wallNRM: this.wallTexturePath[id]?this.wallTexturePath[id].wallNRM:"",
-                    wallHGT: path
-                };
-        
-                this.wallTextureLoaded[id] = {
-                    wallCOL: this.wallTextureLoaded[id]?this.wallTextureLoaded[id].wallCOL:new THREE.Texture,
-                    wallNRM: this.wallTextureLoaded[id]?this.wallTextureLoaded[id].wallNRM:new THREE.Texture,
-                    wallHGT: texture
-                }
-                break;
-            }
-        }
-        
-    }
+    // ---------------------------------------------------------
+    // SELECTORS
+    // ---------------------------------------------------------
 
-    addRoofTexture(id: string, type: string, path: string, texture: THREE.Texture) {
-        switch(type) {
-            case "COL": {
-                this.roofTexturePath[id] = {
-                    roofCOL: path,
-                    roofNRM: this.roofTexturePath[id]?this.roofTexturePath[id].roofNRM:"",
-                    roofHGT: this.roofTexturePath[id]?this.roofTexturePath[id].roofHGT:""
-                };
-        
-                this.roofTextureLoaded[id] = {
-                    roofCOL: texture,
-                    roofNRM: this.roofTextureLoaded[id]?this.roofTextureLoaded[id].roofNRM:new THREE.Texture,
-                    roofHGT: this.roofTextureLoaded[id]?this.roofTextureLoaded[id].roofHGT:new THREE.Texture
-                }
-                break;
-            }
-            case "NRM": {
-                this.roofTexturePath[id] = {
-                    roofCOL: this.roofTexturePath[id]?this.roofTexturePath[id].roofCOL:"",
-                    roofNRM: path,
-                    roofHGT: this.roofTexturePath[id]?this.roofTexturePath[id].roofHGT:""
-                };
-        
-                this.roofTextureLoaded[id] = {
-                    roofCOL: this.roofTextureLoaded[id]?this.roofTextureLoaded[id].roofCOL:new THREE.Texture,
-                    roofNRM: texture,
-                    roofHGT: this.roofTextureLoaded[id]?this.roofTextureLoaded[id].roofHGT:new THREE.Texture
-                }
-                break;
-            }
-            case "HGT":{
-                this.roofTexturePath[id] = {
-                    roofCOL: this.roofTexturePath[id]?this.roofTexturePath[id].roofCOL:"",
-                    roofNRM: this.roofTexturePath[id]?this.roofTexturePath[id].roofNRM:"",
-                    roofHGT: path
-                };
-        
-                this.roofTextureLoaded[id] = {
-                    roofCOL: this.roofTextureLoaded[id]?this.roofTextureLoaded[id].roofCOL:new THREE.Texture,
-                    roofNRM: this.roofTextureLoaded[id]?this.roofTextureLoaded[id].roofNRM:new THREE.Texture,
-                    roofHGT: texture
-                }
-                break;
-            }
-        }
-        
-    }
+    selectWallTexture(id: string) { this.wallTextureSelected = id; }
+    selectRoofTexture(id: string) { this.roofTextureSelected = id; }
+    selectWindowTexture(id: string) { this.windowTextureSelected = id; }
+    selectDoorFrameTexture(id: string) { this.doorFrameTextureSelected = id; }
+    selectDoorTexture(id: string) { this.doorTextureSelected = id; }
 
-    addWindowTexture(id: string, type: string, path: string, texture: THREE.Texture) {
-        switch(type) {
-            case "COL": {
-                this.windowTexturePath = {
-                    winCOL: path,
-                    winNRM: this.windowTexturePath?this.windowTexturePath.winNRM:"",
-                    winHGT: this.windowTexturePath?this.windowTexturePath.winHGT:""
-                };
-        
-                this.windowTextureLoaded = {
-                    winCOL: texture,
-                    winNRM: this.windowTextureLoaded?this.windowTextureLoaded.winNRM:new THREE.Texture,
-                    winHGT: this.windowTextureLoaded?this.windowTextureLoaded.winHGT:new THREE.Texture
-                }
-                break;
-            }
-            case "NRM": {
-                this.windowTexturePath = {
-                    winCOL: this.windowTexturePath?this.windowTexturePath.winCOL:"",
-                    winNRM: path,
-                    winHGT: this.windowTexturePath?this.windowTexturePath.winHGT:""
-                };
-        
-                this.windowTextureLoaded = {
-                    winCOL: this.windowTextureLoaded?this.windowTextureLoaded.winCOL:new THREE.Texture,
-                    winNRM: texture,
-                    winHGT: this.windowTextureLoaded?this.windowTextureLoaded.winHGT:new THREE.Texture
-                }
-                break;
-            }
-            case "HGT":{
-                this.windowTexturePath = {
-                    winCOL: this.windowTexturePath?this.windowTexturePath.winCOL:"",
-                    winNRM: this.windowTexturePath?this.windowTexturePath.winNRM:"",
-                    winHGT: path
-                };
-        
-                this.windowTextureLoaded = {
-                    winCOL: this.windowTextureLoaded?this.windowTextureLoaded.winCOL:new THREE.Texture,
-                    winNRM: this.windowTextureLoaded?this.windowTextureLoaded.winNRM:new THREE.Texture,
-                    winHGT: texture
-                }
-                break;
-            }
-        }
-        
-    }
-
-    // loadTexture(texturePath: string) {
-    //     return this.loader.load(texturePath, );
-    // }
-
-    selectWallTexture(id: string) {
-        this.wallTextureSelected = id;
-    }
-
-    selectRoofTexture(id: string) {
-        this.roofTextureSelected = id;
-    }
-
-
-
-    getGroundTexture() : {
-        groundCOL: THREE.Texture,
-        groundNRM: THREE.Texture
-    }{
+    getGroundTexture() {
         return this.groundTextureLoaded;
     }
-
-    // getWallTexture(index: number) : {
-    //     wallCOL: THREE.Texture,
-    //     wallNRM: THREE.Texture
-    // } | null 
-    // {
-    //     if(this.wallTexturePath[index]){
-    //         if(!this.wallTextureLoaded[index]) {
-    //             this.wallTextureLoaded[index] = {
-    //                 wallCOL: this.loadTexture(this.wallTexturePath[index].wallCOL),
-    //                 wallNRM: this.loadTexture(this.wallTexturePath[index].wallNRM)
-    //             }
-    //         } 
-    //         return this.wallTextureLoaded[index];
-    //     }
-    //     return null;
-    // }
 }

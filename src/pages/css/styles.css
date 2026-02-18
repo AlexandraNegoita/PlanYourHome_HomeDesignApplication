@@ -1,363 +1,218 @@
-
-#optionsMenu {
-    position: fixed;
-    background-color: rgb(30, 53, 78);
-    /* color: #fff; */
-	overflow-y:auto;
-	overflow-x: hidden;
-    top: 0;
-    left: 0;
-    height: 100vh;
-    width: 25vw;
-    padding: 0;
-    margin: 0;
-    transition: 0.3s;
-    transform: translateX(-60%);
-	z-index: 5!important;
-  }
-  
-  #optionsMenu.is-active {
-    transform: translateX(0%);
-  }
-  
-  #optionsMenu.is-active li {
-    animation: animate 350ms ease calc(var(--i) * 100ms) both;
-  }
-  
-  .align-right {
-	display: flex;
-	justify-content: flex-end;
-	flex-wrap: wrap;
+:root {
+  --primary-bg: rgb(45, 73, 105);
+  --secondary-bg: rgb(30, 53, 78);
+  --accent-color: rgb(79, 161, 255);
+  --sidebar-width: 350px;
+  --button-height: 50px;
 }
+
+body, html {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Prevent scrolling of the whole page */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #FAEBD7; /* Fallback color */
+}
+
+/* --- CANVAS CONTAINER --- */
+#content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+}
+
+#canvas2D, #canvas3D {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* --- MENU TOGGLE BUTTON (Floating Top Left) --- */
+#openMenu {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--primary-bg);
+  border: 2px solid var(--accent-color);
+  color: white;
+  z-index: 100;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease, background 0.3s;
+}
+
+#openMenu:hover {
+  transform: scale(1.1);
+  background: var(--secondary-bg);
+}
+
+#openMenu i {
+  font-size: 24px;
+}
+
+/* --- MAIN CONFIGURATION MENU --- */
+#configurationMenu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: var(--sidebar-width);
+  background-color: var(--primary-bg);
+  /* Glassmorphism effect */
+  background: rgba(45, 73, 105, 0.95);
+  backdrop-filter: blur(10px);
+  
+  transform: translateX(-100%); /* Hidden by default */
+  transition: transform 0.3s ease-in-out;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  padding-top: 100px; /* Space for the toggle button */
+  padding-bottom: 20px;
+  overflow-y: auto;
+  box-shadow: 4px 0 15px rgba(0,0,0,0.5);
+}
+
+#configurationMenu.is-active {
+  transform: translateX(0);
+}
+
+/* --- SECONDARY OPTIONS MENU (Materials) --- */
+#optionsMenu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: var(--sidebar-width);
+  background-color: var(--secondary-bg);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-in-out;
+  z-index: 60; /* Higher than config menu */
+  padding: 80px 20px 20px 20px;
+  overflow-y: auto;
+  box-shadow: 4px 0 15px rgba(0,0,0,0.5);
+}
+
+#optionsMenu.is-active {
+  transform: translateX(0);
+  /* On very wide screens, you might want this: transform: translateX(var(--sidebar-width)); */
+}
+
+/* --- BUTTON STYLES --- */
+.confButton {
+  position: relative;
+  width: 100%;
+  margin: 10px 0;
+  padding: 0 15px; /* Internal spacing */
+  box-sizing: border-box;
+}
+
+.confButton a {
+  display: flex;
+  justify-content: space-between; /* Icon on right, text on left */
+  align-items: center;
+  width: 100%;
+  padding: 15px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 1rem;
+  border-left: 4px solid transparent;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border-radius: 4px; /* Slight rounded corners */
+}
+
+.confButton a:hover, .confButton a.active {
+  background: rgba(255, 255, 255, 0.2);
+  border-left: 4px solid var(--accent-color);
+  padding-left: 25px; /* Slide effect */
+  color: var(--accent-color);
+}
+
+/* Icon alignment fix */
+.confButton i {
+  margin-left: 10px;
+}
+
+/* --- SUB-MENUS (Edit/Material toggle sections) --- */
+#editMenu, #materialMenu {
+  display: none;
+  background: rgba(0, 0, 0, 0.2);
+  margin: 0 10px;
+  border-radius: 5px;
+  padding: 10px 0;
+}
+
+/* --- PHOTO/TEXTURE GRID --- */
 .photo-wrapper {
-	flex: 0 0 33.3333%; /* Each photo takes up 1/3rd of the row */
-	max-width: 33.3333%;
-	padding: 5px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.photo-wrapper:hover {
+  transform: scale(1.05);
+  z-index: 2;
 }
 .photo {
-	width: 100%; /* Ensure the image takes up the full width of its container */
-	height: auto; /* Maintain aspect ratio */
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  border: 2px solid transparent;
 }
-.container {
-	overflow: hidden!important; /* Prevent overflow */
-}
-
-#configurationMenu {
-    position: fixed;
-    background-color: rgb(45, 73, 105);
-    /* color: #fff; */
-	overflow:visible;
-    top: 0;
-    left: 0;
-    height: 100vh;
-    width: 20vw;
-    padding: 0;
-    margin: 0;
-    transition: 0.3s;
-    transform: translateX(-60%);
-	z-index: 10;
-  }
-  
-  #configurationMenu.is-active {
-    transform: translateX(0%);
-  }
-  
-  #configurationMenu.is-active li {
-    animation: animate 350ms ease calc(var(--i) * 100ms) both;
-  }
-  
-  @keyframes animate {
-    0% {
-      opacity: 0;
-      transform: translateX(-2em);
-    }
-    100% {
-      opacity: 1;
-    }
-  }
-
-  ul {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .confButtonS {
-    position: relative;
-    top: 0;
-    /* left: -2vw; */
-    width: 30%;
-    height: 3vh;
-    margin: 2vh;
-    display: block;
-    justify-content:end;
-    align-items: end;
-  }
-  .confButtonS a {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: end;
-    align-items: end;
-    background: rgba(255, 255, 255, 0.05);
-    box-shadow: 0 15px 15px rgba(0, 0, 0, 0.3);
-    padding: 3vh;
-    letter-spacing: 1px;
-    text-decoration: none;
-    overflow: hidden;
-    color: white;
-    font-weight: 400px;
-    z-index: 1;
-    transition: 0.2s;
-    backdrop-filter: blur(15px);
-  }
-  .confButtonS:hover a {
-   /* letter-spacing: 3px;*/
-   color:rgb(79, 161, 255)
-  }
-  
-  .confButton {
-    position: relative;
-    top: 0;
-    left: -2vw;
-    width: 100%;
-    height: 3vh;
-    margin: 2vh;
-    /* display: flex; */
-    justify-content: end;
-    align-items: center;
-  }
-  .confButton a {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: end;
-    align-items: center;
-    background: rgba(255, 255, 255, 0.05);
-    box-shadow: 0 15px 15px rgba(0, 0, 0, 0.3);
-    padding: 3vh;
-    letter-spacing: 1px;
-    text-decoration: none;
-    overflow: hidden;
-    color: white;
-    font-weight: 400px;
-    z-index: 1;
-    transition: 0.2s;
-    backdrop-filter: blur(15px);
-  }
-  .confButton:hover a {
-   /* letter-spacing: 3px;*/
-   color:rgb(79, 161, 255)
-  }
-  .confButton a::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 70%;
-    height: 100%;
-    background: linear-gradient(to left, rgba(255, 255, 255, 0.15), transparent);
-    transform: skewX(45deg) translate(0);
-    transition: 0.5s;
-    filter: blur(0px);
-  }
-  .confButton:hover a::before {
-    transform: skewX(45deg) translate(200px);
-  }
-  h4 {
-		color: #999;
-		font-weight: 500;
-		&:after {
-			content: "%";
-			padding-left: 1px;
-		}
-	}
-
-	input[type="range"] {
-		outline: 0;
-		border: 0;
-		/*border-radius: 500px;*/
-		width: 95%;
-		max-width: 100%;
-		margin: 16px;
-		transition: box-shadow 0.2s ease-in-out;
-		@media screen and (-webkit-min-device-pixel-ratio:0) {
-			& {
-				overflow: hidden;
-				height: 40px;
-				-webkit-appearance: none;
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(15px);
-			}
-			&::-webkit-slider-runnable-track {
-				height: 40px;
-				-webkit-appearance: none;
-				color: #444;
-				transition: box-shadow 0.2s ease-in-out;
-			}
-			&::-webkit-slider-thumb {
-				width: 40px;
-				-webkit-appearance: none;
-				height: 40px;
-				cursor: ew-resize;
-				background: #fff;
-				box-shadow: -340px 0 0 320px #1597ff, inset 0 0 0 40px #1597ff;
-				border-radius: 50%;
-				transition: box-shadow 0.2s ease-in-out;
-				position: relative;
-			}
-			&:active::-webkit-slider-thumb {
-				background: #fff;
-				box-shadow: -340px 0 0 320px #1597ff, inset 0 0 0 3px #1597ff;
-			}
-		}
-		&::-moz-range-progress {
-			background-color: #43e5f7; 
-		}
-		&::-moz-range-track {  
-			background-color: #9a905d;
-		}
-		&::-ms-fill-lower {
-			background-color: #43e5f7; 
-		}
-		&::-ms-fill-upper {  
-			background-color: #9a905d;
-		}
-	}
-
-#h4-container {
-	width: 400px;
-	max-width: 100%;
-	padding: 0 20px;
-	box-sizing: border-box;
-	position: relative;
-	#h4-subcontainer {
-		width: 100%;
-		position: relative;
-		h4 {
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			position: absolute;
-			top: 0;
-			width: 40px;
-			height: 40px;
-			color: #fff !important;
-			font-size: 12px;
-			transform-origin: center -10px;
-			transform: translateX(-50%);
-			transition: margin-top 0.15s ease-in-out,
-				opacity 0.15s ease-in-out;
-			span {
-				position: absolute;
-				width: 100%;
-				height: 100%;
-				top: 0;
-				left: 0;
-				background-color: #1597ff;
-				border-radius: 0 50% 50% 50%;
-				transform: rotate(45deg);
-				z-index: -1;
-			}
-		}
-	}
-}
-input:not(:active) + #h4-container h4 {
-	opacity: 0;
-	margin-top: -50px;
-	pointer-events: none;
+.photo:hover {
+  border-color: var(--accent-color);
 }
 
-#editMenu, #materialMenu {
-	display: none;
-	/* //transition: margin-top 0.15s ease-in-out, opacity 0.15s ease-in-out; */
-	align-items: center;
-	justify-content: center;
-	margin: 2vh;
-}
-
-#editMenu .confButton, #materialMenu .confButton {
-	margin: 2vh;
-}
-
-#openMenu {
-  width: 40vh;
-  height:40vh;
-  border-radius: 50%;
-  border:1px solid #4679BD; 
-  overflow:hidden;
-  /* position: absolute; */
-  position: absolute;
-  display: block;
-  top: -20vh;
-  left: 0vh;
-  background: #4679BD; 
-  /* //box-shadow: 0 0 3px gray; */
-  transition: 0.4s;
-  }
-  #openMenu:hover {
-  background:#4679BD;
-  border:15px solid #cfdcec;
-  }
-  #openMenu button {
-  display:block;
-  float:left;
-  line-height:1em;
-      
-  text-align:center;
-  color:#e2eaf3;
-  font-family:Verdana;
-  font-size:1.2em;
-  font-weight:bold;
-  text-decoration:none;
-}
-
-
-/* The Modal (background) */
-.modal {
-  display: none; /* Hidden by default */
-  position: fixed; /* Stay in place */
-  z-index: 1; /* Sit on top */
-  left: 0;
-  top: 0;
-  width: 100%; /* Full width */
-  height: 100%; /* Full height */
-  overflow: auto; /* Enable scroll if needed */
-  background-color: rgb(0,0,0); /* Fallback color */
-  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-}
-
-/* Modal Content/Box */
-.modal-content {
-  background-color: #fefefe;
-  margin: 15% auto; /* 15% from the top and centered */
-  padding: 20px;
-  border: 1px solid #888;
-  width: 80%; /* Could be more or less, depending on screen size */
-}
-
-/* The Close Button */
-.close {
-  color: #aaa;
-  float: right;
-  font-size: 28px;
-  font-weight: bold;
-}
-
-.close:hover,
-.close:focus {
-  color: black;
-  text-decoration: none;
+/* --- SLIDERS --- */
+input[type="range"] {
+  width: 100%;
+  margin: 10px 0;
   cursor: pointer;
 }
-
-
-
-input[type="file"]::file-selector-button {
-  background-color: #4CAF50;
+label {
   color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+/* --- MODAL --- */
+.modal {
+  background-color: rgba(0,0,0,0.6);
+  z-index: 2000; /* Highest */
+}
+
+.modal-content {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+/* --- RESPONSIVE ADJUSTMENTS --- */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 85%; /* Menu takes almost full screen on mobile */
+  }
+  
+  #openMenu {
+    width: 50px;
+    height: 50px;
+    top: 15px;
+    left: 15px;
+  }
+  
+  .confButton a {
+    font-size: 1.1rem; /* Larger text for touch */
+    padding: 18px;
+  }
 }

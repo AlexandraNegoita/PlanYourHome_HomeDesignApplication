@@ -1,141 +1,180 @@
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
-    <meta charset="utf-8"/>
-    <title><%= htmlWebpackPlugin.options.title %></title>
-    <link rel="stylesheet" href="/css/styles.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
-    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>
+        <%= htmlWebpackPlugin.options.title %>
+    </title>
+    <!-- FontAwesome -->
     <script src="https://kit.fontawesome.com/97b0dbcdac.js" crossorigin="anonymous"></script>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/styles.css">
 </head>
 
 <body>
-    <div class="container-md" id="configurationMenu">
-        <div class="row w-100">
-            <!-- <button type="button" class="btn btn-block btn-lg confButton" data-toggle="#configurationMenu"><i class="fa-solid fa-xmark fa-2xl"></i></button> -->
-            <button type="button" id="openMenu" data-toggle="#configurationMenu"></button>
-        </div>
-        <!-- <div class="row w-100">
-            <div class="btn btn-block btn-lg confButton"><a id="buttonDrawMode" role="button"></a></div>
-        </div> -->
-        <div class="row w-100" style="margin-top: 30vh">
-            <div class="btn btn-block btn-lg confButton"><a id="buttonEditMode" role="button"></a></div>
-        </div>
-        <div class="row w-100" id="editMenu">
-            <div class="btn btn-block btn-lg confButton"><a id="buttonEditGripPoint" role="button"></a></div>
-            <div class="btn btn-block btn-lg confButton"><a id="buttonEditRoof" role="button"></a></div>
-            <div class="btn btn-block btn-lg confButton"><a id="buttonEditWindow" role="button"></a></div>
-            <div class="btn btn-block btn-lg confButton"><a id="buttonEditDoor" role="button"></a></div>
-        </div>
-        <div class="row w-100">
-            <div class="btn btn-block btn-lg confButton"><a id="buttonMaterials" role="button"></a></div>
-        </div>
-        <div class="row w-100" id="materialMenu">
-            <div class="btn btn-block btn-lg confButton"><a id="buttonMatWalls" role="button" data-toggleopt="closed"></a></div>
-            <div class="btn btn-block btn-lg confButton"><a id="buttonMatFloor" role="button"></a></div>
-        </div>
-        <div class="row w-100">
-            <div class="btn btn-block btn-lg confButton"><a id="buttonExportJSON" role="button"></a></div>
-        </div>
-        <div class="row w-100">
-            <!-- <input type="file" class="confButton" id="fileInput" accept=".json"> -->
-            <input type="file" id="fileInput" style="display: none">
-            <div class="btn btn-block btn-lg confButton"><a id="buttonImportFile" role="button">Choose File</a></div>
-        </div>
-        <div class="row w-100">
-             <div class="btn btn-block btn-lg confButton"><a id="buttonSwitchView" role="button"></a></div>
-        </div>
-        <br>
-        <div class="row w-100">
-            <div class="btn btn-block btn-lg confButton"><a id="openDesignerButton" role="button"></a></div>
-       </div>
-        
-        <!-- <div class="row w-100">
-            <input type="range" class="confButton" value="0">
-        </div> -->
-           
-    </div>
-    <div class="container-md" id="optionsMenu">
 
-    </div>
+    <!-- Canvas Container (Background) -->
     <div id="content"></div>
-    <!-- Trigger/Open The Modal -->
-    <!-- <button id="openDesignerButton">Open Modal</button> -->
 
-    <!-- The Modal -->
-    <!-- <div id="designerModal" class="modal">
+    <!-- Menu Toggle Button (Visible always) -->
+    <button type="button" id="openMenu">
+        <i class="fa-solid fa-bars"></i>
+    </button>
 
-    Modal content -->
+    <!-- Main Configuration Menu -->
+    <div id="configurationMenu">
 
+        <!-- Import/Export Section -->
+        <div class="confButton"><a id="buttonImportFile">Import File</a></div>
+        <input type="file" id="fileInput" style="display: none">
+        <div class="confButton"><a id="buttonExportJSON">Export JSON</a></div>
 
-    <div class="modal" tabindex="-1" role="dialog" id="designerModal">
-        <div class="modal-dialog" role="document">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">House Designer</h5>
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 20px;">
+
+        <!-- Edit Mode Section -->
+        <div class="confButton"><a id="buttonEditMode">Edit Mode</a></div>
+        <div id="editMenu">
+            <div class="confButton"><a id="buttonEditGripPoint">Grip Point</a></div>
+            <div class="confButton"><a id="buttonEditRoof">Roof</a></div>
+            <div class="confButton"><a id="buttonEditWindow">Window</a></div>
+            <div class="confButton"><a id="buttonEditDoor">Door</a></div>
+        </div>
+
+        <!-- Materials Section -->
+        <div class="confButton"><a id="buttonMaterials">Materials</a></div>
+        <div id="materialMenu">
+
+            <div class="confButton">
+                <a id="buttonMatWalls" data-toggleopt="closed">
+                    Walls <i class="fa-solid fa-building fa-2xl fa-fw" style="margin-left: 1em;"></i>
+                </a>
             </div>
-            <div class="modal-body">
-                <div class="container-fluid">
-                    <div class="row w-100">
-                        <div class="col">
-                            <input type="text" class="form-control" placeholder="Length" id="designerLength">
-                        </div>
-                        <div class="col">
-                            <input type="text" class="form-control" placeholder="Width" id="designerWidth">
-                        </div>
-                    </div>
-                    <br>
-                    <div class="row w-100">
-                        <button type="button" class="btn btn-primary" id="buttonOpenSpace">Open Space: OFF</button>
-                    </div>
-                    <hr>
-                    <div class="row w-100">
-                        <button type="button" class="btn btn-primary" id="buttonHallway">Add Hallway: OFF</button>
-                    </div>
-                    <hr>
-                    <div class="row w-100">
-                        <div class="col">
-                            <button type="button" class="btn btn-primary w-100" id="button1Bed">1 Bedroom</button>
-                        </div>
-                        <div class="col">
-                            <button type="button" class="btn btn-primary w-100" id="button2Bed">2 Bedrooms</button>
-                        </div>
-                    </div>
-                    <br>
-                    <div class="row w-100">
-                        <div class="col">
-                            <button type="button" class="btn btn-primary w-100" id="button3Bed">3 Bedrooms</button>
-                        </div>
-                        <div class="col">
-                            <button type="button" class="btn btn-primary w-100" id="button4Bed">4 Bedrooms</button>
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="row w-100">
-                        <div class="col">
-                            <button type="button" class="btn btn-primary w-100" id="button1Bath">1 Bathroom</button>
-                        </div>
-                        <div class="col">
-                            <button type="button" class="btn btn-primary w-100" id="button2Bath">2 Bathrooms</button>
-                        </div>
-                    </div>
-                    
+
+            <div class="confButton">
+                <a id="buttonMatFloor" data-toggleopt="closed">
+                    Floors <i class="fa-solid fa-person-arrow-down-to-line fa-2xl fa-fw" style="margin-left: 1em;"></i>
+                </a>
+            </div>
+
+            <div class="confButton">
+                <a id="buttonMatRoof" data-toggleopt="closed">
+                    Roof <i class="fa-solid fa-house-chimney fa-2xl fa-fw" style="margin-left: 1em;"></i>
+                </a>
+            </div>
+
+            <div class="confButton">
+                <a id="buttonMatWindowFrames" data-toggleopt="closed">
+                    Window Frames <i class="fa-solid fa-border-all fa-2xl fa-fw" style="margin-left: 1em;"></i>
+                </a>
+            </div>
+
+            <div class="confButton">
+                <a id="buttonMatDoorFrames" data-toggleopt="closed">
+                    Door Frames <i class="fa-solid fa-door-closed fa-2xl fa-fw" style="margin-left: 1em;"></i>
+                </a>
+            </div>
+
+            <div class="confButton">
+                <a id="buttonMatDoors" data-toggleopt="closed">
+                    Doors <i class="fa-solid fa-door-open fa-2xl fa-fw" style="margin-left: 1em;"></i>
+                </a>
+            </div>
+
+        </div>
+
+
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 20px;">
+
+        <!-- View Controls -->
+        <div class="confButton"><a id="buttonSwitchView" data-viewMode="2D">Switch 3D View</a></div>
+
+        <!-- Designer Trigger -->
+        <div class="confButton"><a id="openDesignerButton">House Designer</a></div>
+    </div>
+
+    <!-- Options Menu (Slide-over for textures/details) -->
+    <div id="optionsMenu">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="text-white m-0">Options</h4>
+            <button class="btn btn-sm btn-outline-light" id="closeOptionsMenu">
+                <i class="fa-solid fa-xmark"></i> Close
+            </button>
+        </div>
+
+        <!-- Dynamic Content Container -->
+        <!-- Static sliders removed to prevent duplicates -->
+        <div id="textureContainer"></div>
+    </div>
+
+    <!-- Designer Modal -->
+    <div class="modal fade" id="designerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">House Designer</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                        id="closeDesigner"></button>
                 </div>
-            </div>  
-            <div class="modal-footer">
-              <button type="button" class="btn btn-primary" id="buttonGenerate">Generate</button>
-              <button type="button" class="btn btn-secondary" id="closeDesigner" data-dismiss="modal">Cancel</button>
+                <div class="modal-body">
+                    <!-- Dimensions -->
+                    <h6 class="fw-bold mb-2">Dimensions (cm)</h6>
+                    <div class="row g-2 mb-4">
+                        <div class="col">
+                            <div class="form-floating">
+                                <input type="number" class="form-control" id="designerLength" placeholder="1500"
+                                    value="1500">
+                                <label for="designerLength">Length</label>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-floating">
+                                <input type="number" class="form-control" id="designerWidth" placeholder="1000"
+                                    value="1000">
+                                <label for="designerWidth">Width</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Layout Options -->
+                    <h6 class="fw-bold mb-2">Layout Options</h6>
+                    <div class="d-grid gap-2 mb-4">
+                        <button type="button" class="btn btn-outline-dark w-100" id="buttonOpenSpace">Open Space:
+                            OFF</button>
+                        <button type="button" class="btn btn-outline-dark w-100" id="buttonHallway">Add Hallway:
+                            OFF</button>
+                    </div>
+
+                    <!-- Room Counts (With Labels) -->
+                    <h6 class="fw-bold mb-2">Bedrooms</h6>
+                    <div class="btn-group w-100 mb-3" role="group" aria-label="Bedroom Selection">
+                        <button type="button" class="btn btn-outline-primary active" id="button1Bed">1</button>
+                        <button type="button" class="btn btn-outline-primary" id="button2Bed">2</button>
+                        <button type="button" class="btn btn-outline-primary" id="button3Bed">3</button>
+                        <button type="button" class="btn btn-outline-primary" id="button4Bed">4</button>
+                    </div>
+
+                    <h6 class="fw-bold mb-2">Bathrooms</h6>
+                    <div class="btn-group w-100" role="group" aria-label="Bathroom Selection">
+                        <button type="button" class="btn btn-outline-primary active" id="button1Bath">1</button>
+                        <button type="button" class="btn btn-outline-primary" id="button2Bath">2</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="buttonGenerate"
+                        data-bs-dismiss="modal">Generate</button>
+                </div>
             </div>
-          </div>
         </div>
     </div>
 
-
-
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4" crossorigin="anonymous"></script>
-
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

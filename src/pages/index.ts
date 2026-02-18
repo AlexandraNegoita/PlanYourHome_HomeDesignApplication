@@ -1,662 +1,557 @@
-// Import our custom CSS
-import '/css/styles.css'
-// Import all of Bootstrap's JS
-// import * as bootstrap from 'bootstrap'
+// --- IMPORTS ---
+import '/css/styles.css';
+import * as bootstrap from 'bootstrap'; // Ensure Bootstrap is installed via npm
 
 import * as Viewer2D from '../planner/viewer2d/Viewer2D';
 import * as Viewer3D from '../planner/viewer3d/Viewer3D';
 import { TextureManager } from '../planner/viewer3d/TextureManager';
-import './menu';
-import './loader';
-import './designer';
 import { SpriteManager } from '../planner/viewer2d/SpriteManager';
 import { Parser } from '../planner/model/Parser';
 import { Designer } from '../planner/model/Designer';
+import './menu';
+import './loader';
+import './designer';
 
+// --- INITIALIZATION ---
 
-
-
+// 1. Setup Texture Manager
 const textureManager = new TextureManager(
-    [{ id: "0", for: "GROUND", path: "./assets/textures/ground/GroundGrassGreen002_COL_2K.jpg", type: "COL" },
-    { id: "0", for: "GROUND", path: "./assets/textures/ground/GroundGrassGreen002_NRM_2K.jpg", type: "NRM" },
+    [
+        { id: "0", for: "GROUND", path: "./assets/textures/ground/GroundGrassGreen002_COL_2K.jpg", type: "COL" },
+        { id: "0", for: "GROUND", path: "./assets/textures/ground/GroundGrassGreen002_NRM_2K.jpg", type: "NRM" },
 
-    { id: "1634", for: "WALL", path: "./assets/textures/walls/wall_1634/Terracotta_Tiles_002_THUMB.png", type: "THUMB" },
-    { id: "1634", for: "WALL", path: "./assets/textures/walls/wall_1634/Terracotta_Tiles_002_Base_Color.jpg", type: "COL" },
-    { id: "1634", for: "WALL", path: "./assets/textures/walls/wall_1634/Terracotta_Tiles_002_Normal.jpg", type: "NRM" },
-    { id: "1634", for: "WALL", path: "./assets/textures/walls/wall_1634/Terracotta_Tiles_002_Height.png", type: "HGT" },
+        { id: "1634", for: "WALL", path: "./assets/textures/walls/wall_1634/Terracotta_Tiles_002_THUMB.png", type: "THUMB" },
+        { id: "1634", for: "WALL", path: "./assets/textures/walls/wall_1634/Terracotta_Tiles_002_Base_Color.jpg", type: "COL" },
+        { id: "1634", for: "WALL", path: "./assets/textures/walls/wall_1634/Terracotta_Tiles_002_Normal.jpg", type: "NRM" },
+        { id: "1634", for: "WALL", path: "./assets/textures/walls/wall_1634/Terracotta_Tiles_002_Height.png", type: "HGT" },
 
-    { id: "4954", for: "WALL", path: "./assets/textures/walls/wall_4954/Plaster_Rough_001_THUMB.jpg", type: "THUMB" },
-    { id: "4954", for: "WALL", path: "./assets/textures/walls/wall_4954/Plaster_Rough_001_COLOR.jpg", type: "COL" },
-    { id: "4954", for: "WALL", path: "./assets/textures/walls/wall_4954/Plaster_Rough_001_NORM.jpg", type: "NRM" },
-    { id: "4954", for: "WALL", path: "./assets/textures/walls/wall_4954/Plaster_Rough_001_DISP.png", type: "HGT" },
+        { id: "4954", for: "WALL", path: "./assets/textures/walls/wall_4954/Plaster_Rough_001_THUMB.jpg", type: "THUMB" },
+        { id: "4954", for: "WALL", path: "./assets/textures/walls/wall_4954/Plaster_Rough_001_COLOR.jpg", type: "COL" },
+        { id: "4954", for: "WALL", path: "./assets/textures/walls/wall_4954/Plaster_Rough_001_NORM.jpg", type: "NRM" },
+        { id: "4954", for: "WALL", path: "./assets/textures/walls/wall_4954/Plaster_Rough_001_DISP.png", type: "HGT" },
 
-    { id: "2050", for: "WALL", path: "./assets/textures/walls/wall_2050/Material_2050.jpg", type: "THUMB" },
-    { id: "2050", for: "WALL", path: "./assets/textures/walls/wall_2050/Concrete_019_BaseColor.jpg", type: "COL" },
-    { id: "2050", for: "WALL", path: "./assets/textures/walls/wall_2050/Concrete_019_Normal.jpg", type: "NRM" },
-    { id: "2050", for: "WALL", path: "./assets/textures/walls/wall_2050/Concrete_019_Height.png", type: "HGT" },
+        { id: "2050", for: "WALL", path: "./assets/textures/walls/wall_2050/Material_2050.jpg", type: "THUMB" },
+        { id: "2050", for: "WALL", path: "./assets/textures/walls/wall_2050/Concrete_019_BaseColor.jpg", type: "COL" },
+        { id: "2050", for: "WALL", path: "./assets/textures/walls/wall_2050/Concrete_019_Normal.jpg", type: "NRM" },
+        { id: "2050", for: "WALL", path: "./assets/textures/walls/wall_2050/Concrete_019_Height.png", type: "HGT" },
 
-    { id: "3959", for: "WALL", path: "./assets/textures/walls/wall_3959/Material_2051.jpg", type: "THUMB" },
-    { id: "3959", for: "WALL", path: "./assets/textures/walls/wall_3959/Wall_Plaster_002_BaseColor.jpg", type: "COL" },
-    { id: "3959", for: "WALL", path: "./assets/textures/walls/wall_3959/Wall_Plaster_002_Normal.jpg", type: "NRM" },
-    { id: "3959", for: "WALL", path: "./assets/textures/walls/wall_3959/Wall_Plaster_002_Height.png", type: "HGT" },
+        { id: "3959", for: "WALL", path: "./assets/textures/walls/wall_3959/Material_2051.jpg", type: "THUMB" },
+        { id: "3959", for: "WALL", path: "./assets/textures/walls/wall_3959/Wall_Plaster_002_BaseColor.jpg", type: "COL" },
+        { id: "3959", for: "WALL", path: "./assets/textures/walls/wall_3959/Wall_Plaster_002_Normal.jpg", type: "NRM" },
+        { id: "3959", for: "WALL", path: "./assets/textures/walls/wall_3959/Wall_Plaster_002_Height.png", type: "HGT" },
 
-    { id: "4359", for: "WALL", path: "./assets/textures/walls/wall_4359/Material_1952.jpg", type: "THUMB" },
-    { id: "4359", for: "WALL", path: "./assets/textures/walls/wall_4359/Wall_Plaster_001_basecolor.jpg", type: "COL" },
-    { id: "4359", for: "WALL", path: "./assets/textures/walls/wall_4359/Wall_Plaster_001_normal.jpg", type: "NRM" },
-    { id: "4359", for: "WALL", path: "./assets/textures/walls/wall_4359/Wall_Plaster_001_height.png", type: "HGT" },
+        { id: "4359", for: "WALL", path: "./assets/textures/walls/wall_4359/Material_1952.jpg", type: "THUMB" },
+        { id: "4359", for: "WALL", path: "./assets/textures/walls/wall_4359/Wall_Plaster_001_basecolor.jpg", type: "COL" },
+        { id: "4359", for: "WALL", path: "./assets/textures/walls/wall_4359/Wall_Plaster_001_normal.jpg", type: "NRM" },
+        { id: "4359", for: "WALL", path: "./assets/textures/walls/wall_4359/Wall_Plaster_001_height.png", type: "HGT" },
 
-    { id: "6060", for: "WALL", path: "./assets/textures/walls/wall_6060/Material_606.png", type: "THUMB" },
-    { id: "6060", for: "WALL", path: "./assets/textures/walls/wall_6060/Concrete_014_4K_COLOR.jpg", type: "COL" },
-    { id: "6060", for: "WALL", path: "./assets/textures/walls/wall_6060/Concrete_014_4K_NORM.jpg", type: "NRM" },
-    { id: "6060", for: "WALL", path: "./assets/textures/walls/wall_6060/Concrete_014_4K_DISP.png", type: "HGT" },
+        { id: "6060", for: "WALL", path: "./assets/textures/walls/wall_6060/Material_606.png", type: "THUMB" },
+        { id: "6060", for: "WALL", path: "./assets/textures/walls/wall_6060/Concrete_014_4K_COLOR.jpg", type: "COL" },
+        { id: "6060", for: "WALL", path: "./assets/textures/walls/wall_6060/Concrete_014_4K_NORM.jpg", type: "NRM" },
+        { id: "6060", for: "WALL", path: "./assets/textures/walls/wall_6060/Concrete_014_4K_DISP.png", type: "HGT" },
 
-    { id: "4683", for: "ROOF", path: "./assets/textures/roof/Material_1903.jpg", type: "THUMB" },
-    { id: "4683", for: "ROOF", path: "./assets/textures/roof/Tiles_Stone_001_basecolor.jpg", type: "COL" },
-    { id: "4683", for: "ROOF", path: "./assets/textures/roof/Tiles_Stone_001_normal.jpg", type: "NRM" },
-    { id: "4683", for: "ROOF", path: "./assets/textures/roof/Tiles_Stone_001_height.png", type: "HGT" },
+        { id: "4683", for: "ROOF", path: "./assets/textures/roof/roof_4683/Material_1903.jpg", type: "THUMB" },
+        { id: "4683", for: "ROOF", path: "./assets/textures/roof/roof_4683/Tiles_Stone_001_basecolor.jpg", type: "COL" },
+        { id: "4683", for: "ROOF", path: "./assets/textures/roof/roof_4683/Tiles_Stone_001_normal.jpg", type: "NRM" },
+        { id: "4683", for: "ROOF", path: "./assets/textures/roof/roof_4683/Tiles_Stone_001_height.png", type: "HGT" },
 
-    { id: "2734", for: "WINDOW", path: "./assets/textures/windows/window_2734/Plastic_003_basecolor.jpg", type: "COL" },
-    { id: "2734", for: "WINDOW", path: "./assets/textures/windows/window_2734/Plastic_003_normal.jpg", type: "NRM" },
-    { id: "2734", for: "WINDOW", path: "./assets/textures/windows/window_2734/Plastic_003_height.jpg", type: "HGT" },
-    
-],
-'./assets/textures/HDRI/lonely_road_afternoon_puresky_4k.hdr');
+        { id: "2283", for: "ROOF", path: "./assets/textures/roof/roof_2283/Material_1846.jpg", type: "THUMB" },
+        { id: "2283", for: "ROOF", path: "./assets/textures/roof/roof_2283/Roof_Tiles_Terracotta_008_basecolor.jpg", type: "COL" },
+        { id: "2283", for: "ROOF", path: "./assets/textures/roof/roof_2283/Roof_Tiles_Terracotta_008_normal.jpg", type: "NRM" },
+        { id: "2283", for: "ROOF", path: "./assets/textures/roof/roof_2283/Roof_Tiles_Terracotta_008_height.png", type: "HGT" },
 
+        { id: "2734", for: "WINDOW_FRAME", path: "./assets/textures/windows/window_2734/Material_2025.jpg", type: "THUMB" },
+        { id: "2734", for: "WINDOW_FRAME", path: "./assets/textures/windows/window_2734/Plastic_003_basecolor.jpg", type: "COL" },
+        { id: "2734", for: "WINDOW_FRAME", path: "./assets/textures/windows/window_2734/Plastic_003_normal.jpg", type: "NRM" },
+        { id: "2734", for: "WINDOW_FRAME", path: "./assets/textures/windows/window_2734/Plastic_003_height.jpg", type: "HGT" },
 
+        { id: "9304", for: "WINDOW_FRAME", path: "./assets/textures/windows/window_9304/Material_1504.jpg", type: "THUMB" },
+        { id: "9304", for: "WINDOW_FRAME", path: "./assets/textures/windows/window_9304/Granite_Red_001_Base Color.jpg", type: "COL" },
+        { id: "9304", for: "WINDOW_FRAME", path: "./assets/textures/windows/window_9304/Granite_Red_001_Height.png", type: "HGT" },
+        { id: "9304", for: "WINDOW_FRAME", path: "./assets/textures/windows/window_9304/Granite_Red_001_Normal.jpg", type: "NRM" },
+
+        { id: "8696", for: "FLOOR", path: "./assets/textures/floors/floor_8696/Material_2003.png", type: "THUMB" },
+        { id: "8696", for: "FLOOR", path: "./assets/textures/floors/floor_8696/Wood_Particle_Board_005_basecolor.png", type: "COL" },
+        { id: "8696", for: "FLOOR", path: "./assets/textures/floors/floor_8696/Wood_Particle_Board_005_normal.png", type: "NRM" },
+        { id: "8696", for: "FLOOR", path: "./assets/textures/floors/floor_8696/Wood_Particle_Board_005_height.png", type: "HGT" },
+
+        { id: "2843", for: "FLOOR", path: "./assets/textures/floors/floor_2843/Material_553.png", type: "THUMB" },
+        { id: "2843", for: "FLOOR", path: "./assets/textures/floors/floor_2843/Wood_007_COLOR.jpg", type: "COL" },
+        { id: "2843", for: "FLOOR", path: "./assets/textures/floors/floor_2843/Wood_007_DISP.png", type: "HGT" },
+        { id: "2843", for: "FLOOR", path: "./assets/textures/floors/floor_2843/Wood_007_NORM.jpg", type: "NRM" },
+    ],
+    './assets/textures/HDRI/lonely_road_afternoon_puresky_4k.hdr'
+);
 
 document.addEventListener('contextmenu', event => event.preventDefault());
+
+// 2. Setup Core Classes
 const planner2D = new Viewer2D.Viewer2D();
 const planner3D = new Viewer3D.Viewer3D(planner2D.getModel(), planner2D.getBoard(), textureManager);
 const designer = new Designer();
+const parser = new Parser();
 
+// 3. Initialize App
 (async () => {
+    // Init 2D
     await planner2D.init({
         resizeTo: window,
         backgroundColor: 0xFAEBD7
     });
+
     let spriteManager = new SpriteManager();
     await spriteManager.setWindowPath('./assets/symbols/window.jpg');
     await spriteManager.setDoorPath('./assets/symbols/door.svg');
-
-    const canvas2D = planner2D.canvas;
-    document.getElementById('content')?.appendChild(canvas2D);
-    canvas2D.setAttribute('id', 'canvas2D');
-    document.getElementById('canvas2D')?.style.setProperty('display', 'block');
-    document.getElementById('canvas2D')?.style.setProperty('position', 'absolute');
-   // document.getElementById('canvas2D')?.style.setProperty('pointer-events', 'none');
     planner2D.setup(spriteManager);
-   // window.addEventListener("mousemove", e => wall.drawTemporaryWall([0, 0, e.clientX, e.clientY]), false);
+
+    // DOM Attachments for 2D
+    const contentDiv = document.getElementById('content');
+    const canvas2D = planner2D.canvas;
+    canvas2D.setAttribute('id', 'canvas2D');
     
+    // Init 3D (Hidden by default)
+    if (contentDiv) {
+        contentDiv.appendChild(canvas2D);
+        planner3D.setup(75, window.innerWidth, window.innerHeight, 0.1, 1000, contentDiv);
+    }
+    
+    const canvas3D = planner3D.getRendererCanvas();
+    canvas3D.setAttribute('id', 'canvas3D');
+    canvas3D.style.display = 'none'; // Start hidden
+    if (contentDiv) contentDiv.appendChild(canvas3D);
+
 })();
 
-const buttonExportJSON = document.getElementById('buttonExportJSON');
-if(buttonExportJSON) {
-   // document.getElementById('configurationMenu')?.appendChild(buttonExportJSON);
-   // buttonExportJSON.textContent = 'Export To JSON';
-//    buttonExportJSON.innerHTML = `<i class="fa-solid fa-file-export fa-2xl"></i>`;
-buttonExportJSON.innerHTML = `Export to JSON  <i class="fa-solid fa-file-export fa-2xl fa-fw" style="margin-left: 1em;"></i>`;
 
-    buttonExportJSON.addEventListener('click', () => {
-        buttonExportJSON.setAttribute('href', 
-        'data:application/json;charset=utf-8,' + encodeURIComponent(planner2D.toJSON())
-        );
-        buttonExportJSON.setAttribute('download', 'export' + '.json');
-    });
-}
+// --- UI LOGIC ---
 
+// Globals for UI State
+const uiState = {
+    drawMode: 'wall', // 'wall' | 'room'
+    is3D: false,
+    editMode: false,
+    materialsOpen: false
+};
 
-const buttonDrawMode = document.getElementById('buttonDrawMode');
-if(buttonDrawMode) {
-    //document.getElementById('configurationMenu')?.appendChild(buttonDrawMode);
-    buttonDrawMode.textContent = 'Switch to Room Mode';
-    buttonDrawMode.setAttribute('data-drawmode', 'wall');
-    buttonDrawMode.addEventListener('click', () => {
-        //console.log(buttonDrawMode.getAttribute('data-drawmode') );
-        if(buttonDrawMode.getAttribute('data-drawmode') == 'wall') {
-            
-            buttonDrawMode.textContent = 'Switch to Wall Mode';
-            buttonDrawMode.setAttribute('data-drawMode', 'room');
-            planner2D.setDrawMode('room');
+// DOM Elements
+const configMenu = document.getElementById('configurationMenu');
+const optionsMenu = document.getElementById('optionsMenu');
+const openMenuBtn = document.getElementById('openMenu');
+const closeOptionsBtn = document.getElementById('closeOptionsMenu');
 
+// 1. Sidebar Toggle Logic
+if (openMenuBtn && configMenu) {
+    openMenuBtn.addEventListener('click', () => {
+        configMenu.classList.toggle('is-active');
+        const icon = openMenuBtn.querySelector('i');
+
+        if (configMenu.classList.contains('is-active')) {
+            icon?.classList.remove('fa-bars');
+            icon?.classList.add('fa-arrow-left');
         } else {
-            buttonDrawMode.textContent = 'Switch to Room Mode';
-            buttonDrawMode.setAttribute('data-drawmode', 'wall');
-            planner2D.setDrawMode('wall');
+            icon?.classList.remove('fa-arrow-left');
+            icon?.classList.add('fa-bars');
+            // Close secondary menu when main menu closes
+            optionsMenu?.classList.remove('is-active');
         }
     });
 }
 
-const buttonEditMode = document.getElementById('buttonEditMode');
-const editMenu = document.getElementById('editMenu');
-if(buttonEditMode && editMenu) {
-    //document.getElementById('configurationMenu')?.appendChild(buttonDrawMode);
-    //buttonEditMode.textContent = 'Build Mode';
-    // buttonEditMode.innerHTML = `<i class="fa-solid fa-draw-polygon fa-2xl"></i>`;
-    buttonEditMode.innerHTML = `Edit Mode  <i class="fa-solid fa-draw-polygon fa-2xl fa-fw" style="margin-left: 1em;"></i>`;
-
-    buttonEditMode.setAttribute('data-editmode', 'build');
-    buttonEditMode.addEventListener('click', () => {
-        //console.log(buttonDrawMode.getAttribute('data-drawmode') );
-        if(buttonEditMode.getAttribute('data-editmode') == 'build') {
-            // buttonEditMode.innerHTML = `<i class="fa-solid fa-pen fa-2xl"></i>`;
-            buttonEditMode.innerHTML = `Edit Mode  <i class="fa-solid fa-pen fa-2xl fa-fw" style="margin-left: 1em;"></i>`;
-
-            //buttonEditMode.textContent = 'Edit Mode';
-            buttonEditMode.setAttribute('data-editMode', 'edit');
-            editMenu.style.setProperty('display', 'block');
-            buttonEditMode.style.setProperty('background', 'rgba(255, 255, 255, 0.25)');
-            planner2D.setEditMode(Viewer2D.editMode.EDIT);
-        } else {
-            //buttonEditMode.textContent = 'Build Mode';
-            // buttonEditMode.innerHTML = `<i class="fa-solid fa-draw-polygon fa-2xl"></i>`;
-            buttonEditMode.innerHTML = `Build Mode  <i class="fa-solid fa-draw-polygon fa-2xl fa-fw" style="margin-left: 1em;"></i>`;
-
-            buttonEditMode.setAttribute('data-editmode', 'build');
-            buttonEditMode.style.setProperty('background', 'rgba(255, 255, 255, 0.05)');
-            editMenu.style.setProperty('display', 'none');
-            planner2D.setEditMode(Viewer2D.editMode.NONE);
-        }
+if (closeOptionsBtn && optionsMenu) {
+    closeOptionsBtn.addEventListener('click', () => {
+        optionsMenu.classList.remove('is-active');
     });
 }
 
-
-const buttonEditGripPoint = document.getElementById('buttonEditGripPoint'); 
-if(buttonEditGripPoint) 
-{
-    //buttonEditGripPoint.textContent = 'GripPoint';
-    // buttonEditGripPoint.innerHTML = `<i class="fa-solid fa-circle-dot fa-2xl"></i>`;
-    buttonEditGripPoint.innerHTML = `Grip Point  <i class="fa-solid fa-circle-dot fa-2xl fa-fw" style="margin-left: 2em;"></i>`;
-
-    buttonEditGripPoint.addEventListener('click', () => {
-        //console.log(buttonDrawMode.getAttribute('data-drawmode') );
-        if(buttonEditGripPoint.getAttribute('data-grip') == 'true') {
-            buttonEditGripPoint.style.setProperty('background', 'rgba(255, 255, 255, 0.05)')
-            buttonEditGripPoint.setAttribute('data-grip', 'false');
-            planner2D.setEditMode(Viewer2D.editMode.EDIT);
-    
-        } else {
-            buttonEditGripPoint.style.setProperty('background', 'rgba(255, 255, 255, 0.25)');
-            buttonEditGripPoint.setAttribute('data-grip', 'true');
-            planner2D.setEditMode(Viewer2D.editMode.GRIPPOINT);
-        }
-    });
-}
-
-const buttonEditRoof = document.getElementById('buttonEditRoof'); 
-if(buttonEditRoof) 
-{
-    buttonEditRoof.innerHTML = `Roof  <i class="fa-solid fa-people-roof fa-2xl fa-fw" style="margin-left: 2em;"></i>`;
-
-    buttonEditRoof.addEventListener('click', () => {
-        if(buttonEditRoof.getAttribute('data-roof') == 'true') {
-            buttonEditRoof.style.setProperty('background', 'rgba(255, 255, 255, 0.05)')
-            buttonEditRoof.setAttribute('data-roof', 'false');
-            planner2D.setEditMode(Viewer2D.editMode.EDIT);
-    
-        } else {
-            buttonEditRoof.style.setProperty('background', 'rgba(255, 255, 255, 0.25)');
-            buttonEditRoof.setAttribute('data-roof', 'true');
-            planner2D.setEditMode(Viewer2D.editMode.ROOF);
-        }
-    });
-}
-
-
-function addEvents() {
-    const buttonShowRoof = document.getElementById('buttonShowRoof'); 
-    if(buttonShowRoof) 
-    {
-        buttonShowRoof.innerHTML = `Show Roof  <i class="fa-solid fa-circle-dot fa-2xl fa-fw" style="margin-left: 2em;"></i>`;
-
-        buttonShowRoof.addEventListener('click', () => {
-            //console.log(buttonDrawMode.getAttribute('data-drawmode') );
-            if(buttonShowRoof.getAttribute('data-roof') == 'true') {
-                buttonShowRoof.style.setProperty('background', 'rgba(255, 255, 255, 0.05)')
-                buttonShowRoof.setAttribute('data-roof', 'false');
-                planner3D.setShowRoof(false);
-        
-            } else {
-                buttonShowRoof.style.setProperty('background', 'rgba(255, 255, 255, 0.25)');
-                buttonShowRoof.setAttribute('data-roof', 'true');
-                planner3D.setShowRoof(true);
-            }
-        });
-    }
-
-    const buttonClearAll = document.getElementById('buttonClearAll'); 
-    if(buttonClearAll) 
-    {
-        buttonClearAll.innerHTML = `Clear All  <i class="fa-solid fa-circle-dot fa-2xl fa-fw" style="margin-left: 2em;"></i>`;
-
-        buttonClearAll.addEventListener('click', () => {
-            //console.log(buttonDrawMode.getAttribute('data-drawmode') );
-
-        planner2D.clearBoard();
-        
-        });
-    }
-}
-
-
-const buttonEditWindow = document.getElementById('buttonEditWindow');
-if(buttonEditWindow) 
-    {
-        //buttonEditWindow.textContent = 'Window';
-        // buttonEditWindow.innerHTML = `<i class="fa-solid fa-border-all fa-2xl"></i>`;
-        buttonEditWindow.innerHTML = `Window  <i class="fa-solid fa-border-all fa-2xl fa-fw" style="margin-left: 2em;"></i>`;
-
-        buttonEditWindow.addEventListener('click', () => {
-            //console.log(buttonDrawMode.getAttribute('data-drawmode') );
-            if(buttonEditWindow.getAttribute('data-window') == 'true') {
-                buttonEditWindow.style.setProperty('background', 'rgba(255, 255, 255, 0.05)')
-                buttonEditWindow.setAttribute('data-window', 'false');
-                planner2D.setEditMode(Viewer2D.editMode.EDIT);
-        
-            } else {
-                buttonEditWindow.style.setProperty('background', 'rgba(255, 255, 255, 0.25)');
-                buttonEditWindow.setAttribute('data-window', 'true');
-                planner2D.setEditMode(Viewer2D.editMode.WINDOW);
-            }
-        });
-    }
-    
-const buttonEditDoor = document.getElementById('buttonEditDoor');
-if(buttonEditDoor) 
-    {
-        // buttonEditDoor.textContent = 'Door';
-        // buttonEditDoor.innerHTML = `<i class="fa-solid fa-door-open fa-2xl"></i>`;
-        buttonEditDoor.innerHTML = `Door  <i class="fa-solid fa-door-open fa-2xl fa-fw" style="margin-left: 2em;"></i>`;
-
-        buttonEditDoor.addEventListener('click', () => {
-            //console.log(buttonDrawMode.getAttribute('data-drawmode') );
-            if(buttonEditDoor.getAttribute('data-door') == 'true') {
-                buttonEditDoor.style.setProperty('background', 'rgba(255, 255, 255, 0.05)')
-                buttonEditDoor.setAttribute('data-door', 'false');
-                planner2D.setEditMode(Viewer2D.editMode.EDIT);
-        
-            } else {
-                buttonEditDoor.style.setProperty('background', 'rgba(255, 255, 255, 0.25)');
-                buttonEditDoor.setAttribute('data-door', 'true');
-                planner2D.setEditMode(Viewer2D.editMode.DOOR);
-            }
-        });
-    }
-
-
-    const buttonMaterials = document.getElementById('buttonMaterials');
-    const materialMenu = document.getElementById('materialMenu');
-
-    if(buttonMaterials && materialMenu) {
-        //document.getElementById('configurationMenu')?.appendChild(buttonDrawMode);
-        //buttonMaterials.textContent = 'Build Mode';
-        // buttonMaterials.innerHTML = `<i class="fa-solid fa-draw-polygon fa-2xl"></i>`;
-        buttonMaterials.innerHTML = `Materials  <i class="fa-solid fa-palette fa-2xl fa-fw" style="margin-left: 1em;"></i>`;
-    
-        buttonMaterials.setAttribute('data-materialmenu', 'closed');
-        buttonMaterials.addEventListener('click', () => {
-            //console.log(buttonDrawMode.getAttribute('data-drawmode') );
-            if(buttonMaterials.getAttribute('data-materialmenu') == 'closed') {
-                // buttonMaterials.innerHTML = `<i class="fa-solid fa-pen fa-2xl"></i>`;
-    
-                //buttonMaterials.textContent = 'Edit Mode';
-                buttonMaterials.setAttribute('data-materialmenu', 'open');
-                materialMenu.style.setProperty('display', 'block');
-                buttonMaterials.style.setProperty('background', 'rgba(255, 255, 255, 0.25)');
-                //planner2D.setEditMode(Viewer2D.editMode.EDIT);
-    
-    
-            } else {
-                //buttonMaterials.textContent = 'Build Mode';
-                // buttonMaterials.innerHTML = `<i class="fa-solid fa-draw-polygon fa-2xl"></i>`;
-    
-                buttonMaterials.setAttribute('data-materialmenu', 'closed');
-                buttonMaterials.style.setProperty('background', 'rgba(255, 255, 255, 0.05)');
-                materialMenu.style.setProperty('display', 'none');
-               // planner2D.setEditMode(Viewer2D.editMode.NONE);
-            }
-        });
-    }
-    
-    
-    const buttonMatWalls = document.getElementById('buttonMatWalls'); 
-    if(buttonMatWalls) 
-    {
-        //buttonMatWalls.textContent = 'GripPoint';
-        // buttonMatWalls.innerHTML = `<i class="fa-solid fa-circle-dot fa-2xl"></i>`;
-        buttonMatWalls.innerHTML = `Walls  <i class="fa-solid fa-building fa-2xl fa-fw" style="margin-left: 2em;"></i>`;
-    
-        buttonMatWalls.addEventListener('click', () => {
-            //console.log(buttonDrawMode.getAttribute('data-drawmode') );
-            if(buttonMatWalls.getAttribute('data-walls') == 'true') {
-                buttonMatWalls.style.setProperty('background', 'rgba(255, 255, 255, 0.05)')
-                buttonMatWalls.setAttribute('data-walls', 'false');
-               // planner2D.setEditMode(Viewer2D.editMode.EDIT);
-        
-            } else {
-                buttonMatWalls.style.setProperty('background', 'rgba(255, 255, 255, 0.25)');
-                buttonMatWalls.setAttribute('data-walls', 'true');
-              //  planner2D.setEditMode(Viewer2D.editMode.GRIPPOINT);
-            }
-        });
-    }
-    
-    const buttonMatFloor = document.getElementById('buttonMatFloor');
-    if(buttonMatFloor) 
-        {
-            //buttonMatFloor.textContent = 'Window';
-            // buttonMatFloor.innerHTML = `<i class="fa-solid fa-border-all fa-2xl"></i>`;
-            buttonMatFloor.innerHTML = `Floors  <i class="fa-solid fa-person-arrow-down-to-line fa-2xl fa-fw" style="margin-left: 2em;"></i>`;
-    
-            buttonMatFloor.addEventListener('click', () => {
-                //console.log(buttonDrawMode.getAttribute('data-drawmode') );
-                if(buttonMatFloor.getAttribute('data-floor') == 'true') {
-                    buttonMatFloor.style.setProperty('background', 'rgba(255, 255, 255, 0.05)')
-                    buttonMatFloor.setAttribute('data-floor', 'false');
-                 //   planner2D.setEditMode(Viewer2D.editMode.EDIT);
-            
-                } else {
-                    buttonMatFloor.style.setProperty('background', 'rgba(255, 255, 255, 0.25)');
-                    buttonMatFloor.setAttribute('data-floor', 'true');
-                 //   planner2D.setEditMode(Viewer2D.editMode.WINDOW);
-                }
-            });
-        }
-    const optionsMenu = document.getElementById('optionsMenu');
-    
-    if(optionsMenu) {
-        if(buttonMatWalls) 
-        {
-            buttonMatWalls.addEventListener('click', () => {
-               
-                if(buttonMatWalls.getAttribute('data-toggleopt') == 'closed') {
-                    addPhotosToMenu("WALL");
-                    buttonMatWalls.setAttribute('data-toggleopt', 'open');
-                    optionsMenu.classList.toggle("is-active");
-                    
-                } else {
-                    buttonMatWalls.setAttribute('data-toggleopt', 'closed');
-                    clearMenu();
-                    optionsMenu.classList.toggle("is-active");
-                }
-            });
-        }
-        if(buttonMatFloor) 
-            {
-                buttonMatFloor.addEventListener('click', () => {
-                    if(buttonMatFloor.getAttribute('data-toggeopt') == 'closed') {
-                        buttonMatFloor.setAttribute('data-toggleopt', 'open');
-                        optionsMenu.classList.toggle("is-active");
-                    } else {
-                        buttonMatFloor.setAttribute('data-toggleopt', 'closed');
-                        optionsMenu.classList.toggle("is-active");
-                    }
-                });
-            }
-    }
-
-
-function addPhotosToMenu(type: string) {
-    if(optionsMenu){
-        let showRoof = document.createElement('div');
-        showRoof.className = 'btn btn-block btn-lg confButton';
-        let aRoof = document.createElement('a');
-        aRoof.id = "buttonShowRoof";
-        aRoof.role = "button";
-        showRoof.appendChild(aRoof);
-        optionsMenu.appendChild(showRoof);
-        
-        let clearAll = document.createElement('div');
-        clearAll.className = 'btn btn-block btn-lg confButton';
-        let aClear = document.createElement('a');
-        aClear.id = "buttonClearAll";
-        aClear.role = "button";
-        clearAll.appendChild(aClear);
-        optionsMenu.appendChild(clearAll);
-        addEvents();
-
-        let row: HTMLDivElement;
-        let index = 0;
-        textureManager.readPaths.forEach((photo) => {
-            if(photo.for == type && photo.type == "THUMB") {
-                if (index % 2 === 0) {
-                    row = document.createElement('div');
-                    row.className = 'row mb-4 align-right';
-                    optionsMenu.appendChild(row);
-                }
-                const col = document.createElement('div');
-                col.className = 'col-md-6 photo-wrapper';
-                const img = document.createElement('img');
-                img.src = photo.path;
-                img.addEventListener('click', () => {
-                    textureManager.selectWallTexture(photo.id);
-                });
-                img.className = 'img-fluid photo';
-               img.style.padding = '2vh';
-                col.appendChild(img);
-                row.appendChild(col);
-                index++;
-            }
-        });
-        
-    }
-    
-}
-
-function clearMenu() {
-    if(optionsMenu){
-        while (optionsMenu.firstChild) {
-            optionsMenu.removeChild(optionsMenu.firstChild);
-        }
-    }
-}
-
+// 2. View Switcher (2D <-> 3D)
 const buttonSwitchView = document.getElementById('buttonSwitchView');
-if(buttonSwitchView) {
-    //document.getElementById('configurationMenu')?.appendChild(buttonSwitchView);
-    let x = document.getElementById('content');
-    if(x != null) planner3D.setup(75, window.innerWidth, window.innerHeight, 0.1, 1000, x);
-    const canvas3D = planner3D.getRendererCanvas();
-    document.getElementById('content')?.appendChild(canvas3D);
-
-    canvas3D.setAttribute('id', 'canvas3D');
-    document.getElementById('canvas3D')?.style.setProperty('position', 'absolutey');
-    document.getElementById('canvas3D')?.style.setProperty('display', 'none');
-    document.getElementById('canvas3D')?.style.setProperty('z-index', '10');
-
-    //buttonSwitchView.textContent = 'Switch View';
-    //buttonSwitchView.innerHTML = `<p>Switch View</p>`;
-    buttonSwitchView.innerHTML = `Switch 3D View  <i class="fa-solid fa-cube fa-2xl fa-fw" style="margin-left: 1em;"></i>`;
-    buttonSwitchView.setAttribute('data-viewMode', '2D');
+if (buttonSwitchView) {
+    buttonSwitchView.innerHTML = `Switch 3D View <i class="fa-solid fa-cube fa-2xl fa-fw" style="margin-left: 1em;"></i>`;
+    
     buttonSwitchView.addEventListener('click', () => {
-        if(buttonSwitchView.getAttribute('data-viewMode') == '2D') {
-            // buttonSwitchView.innerHTML = `<i class="fa-solid fa-vector-square fa-2xl"></i>`;
-            buttonSwitchView.innerHTML = `Switch 3D View  <i class="fa-solid fa-vector-square fa-2xl fa-fw" style="margin-left: 1em;"></i>`;
+        uiState.is3D = !uiState.is3D;
+        const c2d = document.getElementById('canvas2D');
+        const c3d = document.getElementById('canvas3D');
 
-            document.getElementById('canvas2D')?.style.setProperty('display', 'none');
-            document.getElementById('canvas3D')?.style.setProperty('display', 'block');
+        if (uiState.is3D) {
+            buttonSwitchView.innerHTML = `Switch 2D View <i class="fa-solid fa-vector-square fa-2xl fa-fw" style="margin-left: 1em;"></i>`;
+            if(c2d) c2d.style.display = 'none';
+            if(c3d) c3d.style.display = 'block';
             planner3D.run();
-            buttonSwitchView.setAttribute('data-viewMode', '3D');
+            //planner3D.materials.updateAllMaterials();
         } else {
-            buttonSwitchView.innerHTML = `Switch 2D View  <i class="fa-solid fa-cube fa-2xl fa-fw" style="margin-left: 1em;"></i>`;
-
-            // buttonSwitchView.innerHTML = `<i class="fa-solid fa-cube fa-2xl"></i>`;
-            document.getElementById('canvas2D')?.style.setProperty('display', 'block');
-            document.getElementById('canvas3D')?.style.setProperty('display', 'none');
+            buttonSwitchView.innerHTML = `Switch 3D View <i class="fa-solid fa-cube fa-2xl fa-fw" style="margin-left: 1em;"></i>`;
+            if(c2d) c2d.style.display = 'block';
+            if(c3d) c3d.style.display = 'none';
             planner3D.stop();
-            buttonSwitchView.setAttribute('data-viewMode', '2D');
         }
-       
     });
 }
 
+// 3. Export JSON
+const buttonExportJSON = document.getElementById('buttonExportJSON');
+if (buttonExportJSON) {
+    buttonExportJSON.innerHTML = `Export to JSON <i class="fa-solid fa-file-export fa-2xl fa-fw" style="margin-left: 1em;"></i>`;
+    buttonExportJSON.addEventListener('click', () => {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(planner2D.toJSON());
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", "house_plan.json");
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    });
+}
 
+// 4. Import JSON
 const fileInput = document.getElementById('fileInput') as HTMLInputElement;
 const buttonImportFile = document.getElementById('buttonImportFile');
+if (buttonImportFile && fileInput) {
+    buttonImportFile.innerHTML = `Import File <i class="fa-solid fa-file-import fa-2xl fa-fw" style="margin-left: 1em;"></i>`;
+    buttonImportFile.addEventListener('click', () => fileInput.click());
 
-if(buttonImportFile) buttonImportFile.addEventListener('click', () =>{
-    fileInput.click();
+    fileInput.addEventListener('change', (event: Event) => {
+        const input = event.target as HTMLInputElement;
+        if (!input.files || input.files.length === 0) return;
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const jsonString = e.target?.result as string;
+                parser.readJSON(jsonString);
+                parser.buildModel(planner2D);
+            } catch (err) {
+                console.error("Error parsing JSON", err);
+                alert("Invalid JSON file");
+            }
+        };
+        reader.readAsText(file);
+    });
+}
+
+// 5. Edit Modes & Accordions
+const setupAccordion = (btnId: string, menuId: string, label: string, iconClass: string) => {
+    const btn = document.getElementById(btnId);
+    const menu = document.getElementById(menuId);
+    if (!btn || !menu) return;
+
+    btn.innerHTML = `${label} <i class="${iconClass} fa-2xl fa-fw" style="margin-left: 1em;"></i>`;
     
-});
-fileInput.addEventListener('change', handleFileSelect);
-if(buttonImportFile) buttonImportFile.innerHTML = `Import File  <i class="fa-solid fa-file-import fa-2xl fa-fw" style="margin-left: 1em;"></i>`;
-
-let parser = new Parser();
-
-function handleFileSelect(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (!input.files) return;
-
-    const file = input.files[0];
-    const reader = new FileReader();
-    console.log("upload");
-    reader.onload = (e) => {
-        try {
-            const jsonString = e.target?.result as string;
-            //const jsonObject = JSON.parse(jsonString);
-            parser.readJSON(jsonString);
-            parser.printJSON();
-            parser.buildModel(planner2D);
-            console.log("citit");
-            //console.log(JSON.stringify(jsonObject, null, 2));
-        } catch (err) {
-            console.log(`Error parsing JSON: ${err}`);
+    btn.addEventListener('click', () => {
+        const isHidden = getComputedStyle(menu).display === 'none';
+        menu.style.display = isHidden ? 'block' : 'none';
+        // Visual feedback
+        btn.parentElement?.style.setProperty('background', isHidden ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.05)');
+        
+        // Logic for Edit Mode specifically
+        if (btnId === 'buttonEditMode') {
+            uiState.editMode = isHidden; // Toggle logic
+            planner2D.setEditMode(isHidden ? Viewer2D.editMode.EDIT : Viewer2D.editMode.NONE);
         }
-    };
+    });
+};
+
+setupAccordion('buttonEditMode', 'editMenu', 'Edit Mode', 'fa-solid fa-draw-polygon');
+setupAccordion('buttonMaterials', 'materialMenu', 'Materials', 'fa-solid fa-palette');
+
+// 6. Sub-Edit Tools
+const setupToolBtn = (id: string, label: string, icon: string, mode: Viewer2D.editMode) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.innerHTML = `${label} <i class="${icon} fa-2xl fa-fw" style="margin-left: 1em;"></i>`;
     
-    reader.readAsText(file);
+    btn.addEventListener('click', () => {
+        // Reset others (simple visual reset, logic handled by planner)
+        document.querySelectorAll('#editMenu .confButton a').forEach(el => {
+            (el as HTMLElement).style.background = 'rgba(255, 255, 255, 0.05)';
+        });
+        btn.style.background = 'rgba(255, 255, 255, 0.25)';
+        planner2D.setEditMode(mode);
+    });
+};
+
+setupToolBtn('buttonEditGripPoint', 'Grip Point', 'fa-solid fa-circle-dot', Viewer2D.editMode.GRIPPOINT);
+setupToolBtn('buttonEditRoof', 'Roof', 'fa-solid fa-people-roof', Viewer2D.editMode.ROOF);
+setupToolBtn('buttonEditWindow', 'Window', 'fa-solid fa-border-all', Viewer2D.editMode.WINDOW);
+setupToolBtn('buttonEditDoor', 'Door', 'fa-solid fa-door-open', Viewer2D.editMode.DOOR);
+
+
+// 7. Materials System (Secondary Sidebar)
+const populateOptionsMenu = (type: string) => {
+    if (!optionsMenu) return;
+    optionsMenu.classList.add('is-active');
+
+    let container = document.getElementById('textureContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'textureContainer';
+        optionsMenu.appendChild(container);
+    }
+    container.innerHTML = '';
+
+    // --- TITLE ---
+    const title = document.createElement('h4');
+    title.textContent = `${type} Materials`;
+    title.className = 'mb-3';
+    container.appendChild(title);
+
+    // --- SLIDERS ---
+    // Shininess removed. Added Bootstrap classes.
+    const sliderBlock = document.createElement('div');
+    sliderBlock.innerHTML = `
+        <div class="mb-3">
+            <label class="form-label">Roughness</label>
+            <input type="range" class="form-range" id="roughnessSliderLocal" min="0" max="100" value="${textureManager.materialRoughness * 100}">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Metalness</label>
+            <input type="range" class="form-range" id="metalnessSliderLocal" min="0" max="100" value="${textureManager.materialMetalness * 100}">
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label">Color Tint</label>
+            <input type="color" class="form-control form-control-color w-100" id="colorPickerLocal" value="#ffffff">
+        </div>
+    `;
+    container.appendChild(sliderBlock);
+
+    // --- TEXTURE GRID ---
+    let row: HTMLDivElement | null = null;
+    let index = 0;
+
+    // Helper map to trigger the correct "Changed" event for live updates
+    const eventMap: { [key: string]: string } = {
+        "WALL": "wallTextureChanged",
+        "FLOOR": "floorTextureChanged",
+        "ROOF": "roofTextureChanged",
+        "WINDOW_FRAME": "windowFrameTextureChanged",
+        "DOOR_FRAME": "doorFrameTextureChanged",
+        "DOOR": "doorTextureChanged"
+    };
+
+    textureManager.readPaths.forEach((photo) => {
+        if (photo.for === type && photo.type === "THUMB") {
+            if (index % 2 === 0) {
+                row = document.createElement('div');
+                row.className = 'row mb-4';
+                container!.appendChild(row);
+            }
+
+            const col = document.createElement('div');
+            col.className = 'col-6 photo-wrapper';
+
+            const img = document.createElement('img');
+            img.src = photo.path;
+            img.className = 'img-fluid photo';
+            img.style.cursor = 'pointer';
+
+            img.addEventListener('click', () => {
+                switch (type) {
+                    case "WALL": textureManager.wallTextureSelected = photo.id; break;
+                    case "FLOOR": textureManager.floorTextureSelected = photo.id; break;
+                    case "ROOF": textureManager.roofTextureSelected = photo.id; break;
+                    case "WINDOW_FRAME": textureManager.windowTextureSelected = photo.id; break;
+                    case "DOOR_FRAME": textureManager.doorTextureSelected = photo.id; break;
+                    case "DOOR": textureManager.doorTextureSelected = photo.id; break;
+                }
+                // Dispatch event to update texture
+                document.dispatchEvent(new CustomEvent(eventMap[type]));
+            });
+
+            col.appendChild(img);
+            row!.appendChild(col);
+            index++;
+        }
+    });
+    
+    // Add extra controls for Roof visibility if type is roof or generic
+    if(type === 'ROOF') {
+        const btnContainer = document.createElement('div');
+        btnContainer.className = 'd-grid gap-2 mb-3';
+        const roofBtn = document.createElement('button');
+        roofBtn.className = 'btn btn-outline-light';
+        roofBtn.textContent = 'Toggle Roof Visibility';
+        roofBtn.onclick = () => {
+            const current = roofBtn.getAttribute('data-active') === 'true';
+            planner3D.setShowRoof(!current);
+            roofBtn.setAttribute('data-active', (!current).toString());
+            roofBtn.classList.toggle('active');
+        };
+        btnContainer.appendChild(roofBtn);
+        container.prepend(btnContainer);
+    }
+
+    // --- LOCAL SLIDER EVENTS ---
+    // We dispatch both the specific parameter update AND the main texture changed event
+    // to ensure the Viewer immediately re-renders the material properties.
+
+    document.getElementById("roughnessSliderLocal")?.addEventListener("input", e => {
+        textureManager.setRoughness(parseInt((e.target as HTMLInputElement).value) / 100);
+        document.dispatchEvent(new CustomEvent(`${type}_materialUpdated`));
+        document.dispatchEvent(new CustomEvent(eventMap[type])); // Force Live Update
+    });
+
+    document.getElementById("metalnessSliderLocal")?.addEventListener("input", e => {
+        textureManager.setMetalness(parseInt((e.target as HTMLInputElement).value) / 100);
+        document.dispatchEvent(new CustomEvent(`${type}_materialUpdated`));
+        document.dispatchEvent(new CustomEvent(eventMap[type])); // Force Live Update
+    });
+
+    document.getElementById("colorPickerLocal")?.addEventListener("input", e => {
+        textureManager.setColorTint((e.target as HTMLInputElement).value);
+        document.dispatchEvent(new CustomEvent(`${type}_materialUpdated`));
+        document.dispatchEvent(new CustomEvent(eventMap[type])); // Force Live Update
+    });
+};
+
+
+// WALLS
+const btnMatWalls = document.getElementById('buttonMatWalls');
+if (btnMatWalls) {
+    btnMatWalls.addEventListener('click', () => populateOptionsMenu("WALL"));
+}
+
+// FLOORS
+const btnMatFloor = document.getElementById('buttonMatFloor');
+if (btnMatFloor) {
+    btnMatFloor.addEventListener('click', () => populateOptionsMenu("FLOOR"));
+}
+
+// ROOF
+const btnMatRoof = document.getElementById('buttonMatRoof');
+if (btnMatRoof) {
+    btnMatRoof.addEventListener('click', () => populateOptionsMenu("ROOF"));
+}
+
+// WINDOW FRAMES
+const btnMatWindowFrames = document.getElementById('buttonMatWindowFrames');
+if (btnMatWindowFrames) {
+    btnMatWindowFrames.addEventListener('click', () => populateOptionsMenu("WINDOW_FRAME"));
+}
+
+// DOOR FRAMES
+const btnMatDoorFrames = document.getElementById('buttonMatDoorFrames');
+if (btnMatDoorFrames) {
+    btnMatDoorFrames.addEventListener('click', () => populateOptionsMenu("DOOR_FRAME"));
+}
+
+// DOORS
+const btnMatDoors = document.getElementById('buttonMatDoors');
+if (btnMatDoors) {
+    btnMatDoors.addEventListener('click', () => populateOptionsMenu("DOOR"));
 }
 
 
-let length: string | number;
-let width: string | number;
-let openSpace: boolean = false;
-let hallway: boolean = false;
-let noBathrooms: number = 1;
-let noBedrooms: number = 1;
-let totalRooms = 0;
 
+// --- HOUSE DESIGNER LOGIC (MODAL) ---
 
+let designState = {
+    openSpace: false,
+    hallway: false,
+    bedrooms: 1,
+    bathrooms: 1
+};
 
-// let designerLength = document.getElementById("designerLength") as HTMLInputElement;
-// if(designerLength) length = designerLength.value
+// Open Modal
+const openDesignerBtn = document.getElementById('openDesignerButton');
+if (openDesignerBtn) {
+    openDesignerBtn.innerHTML = `House Designer <i class="fa-solid fa-pencil fa-2xl fa-fw" style="margin-left: 1em;"></i>`;
+    openDesignerBtn.addEventListener('click', () => {
+        const modalEl = document.getElementById('designerModal');
+        if (modalEl) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+    });
+}
 
-// let designerWidth = document.getElementById("designerWidth") as HTMLInputElement;
-// if(designerWidth) width = designerWidth.value
+// Design Logic - Toggle Helpers
+const updateToggleBtn = (btnId: string, stateKey: 'openSpace' | 'hallway', labelOn: string, labelOff: string) => {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
 
-let buttonOpenSpace = document.getElementById("buttonOpenSpace");
-if(buttonOpenSpace) 
-    {  
-        buttonOpenSpace.style.setProperty('background', 'rgba(25, 25, 112, 1)')
-        buttonOpenSpace.addEventListener('click', () => {
-            if(openSpace == false) {
-                openSpace = true;
-                buttonOpenSpace.innerHTML = 'Open Space: ON';
+    btn.addEventListener('click', () => {
+        // Toggle State
+        designState[stateKey] = !designState[stateKey];
+        const isActive = designState[stateKey];
 
-                buttonOpenSpace.style.setProperty('background', 'rgba(16, 16, 72, 1)')
-            }
-            else {
-                openSpace = false;
-                buttonOpenSpace.innerHTML = 'Open Space: OFF';
+        // Update Text
+        btn.textContent = isActive ? labelOn : labelOff;
 
-                buttonOpenSpace.style.setProperty('background', 'rgba(25, 25, 112, 1)')
-            }
-        });
-    }
+        // Update Visuals (Bootstrap classes)
+        if (isActive) {
+            btn.classList.remove('btn-outline-dark');
+            btn.classList.add('btn-dark');
+        } else {
+            btn.classList.remove('btn-dark');
+            btn.classList.add('btn-outline-dark');
+        }
+    });
+};
 
-let buttonHallway = document.getElementById("buttonHallway");
-if(buttonHallway) 
-    {  
-        buttonHallway.style.setProperty('background', 'rgba(25, 25, 112, 1)')
-        buttonHallway.addEventListener('click', () => {
-            if(hallway == false) {
-                hallway = true;
-                buttonHallway.innerHTML = 'Add Hallway: ON';
+updateToggleBtn('buttonOpenSpace', 'openSpace', 'Open Space: ON', 'Open Space: OFF');
+updateToggleBtn('buttonHallway', 'hallway', 'Add Hallway: ON', 'Add Hallway: OFF');
+// Design Logic - Room Counts
+const setupGroupSelect = (groupIdPrefix: string, count: number, stateKey: 'bedrooms' | 'bathrooms') => {
+    // Determine the suffix based on key (Bed vs Bath)
+    const suffix = stateKey === 'bedrooms' ? 'Bed' : 'Bath';
 
-                buttonHallway.style.setProperty('background', 'rgba(16, 16, 72, 1)')
-            }
-            else {
-                hallway = false;
-                buttonHallway.innerHTML = 'Add Hallway: OFF';
-                buttonHallway.style.setProperty('background', 'rgba(25, 25, 112, 1)')
-            }
-        });
-    }    
-
-let button1Bed = document.getElementById("button1Bed");
-let button2Bed = document.getElementById("button2Bed");
-let button3Bed = document.getElementById("button3Bed");
-let button4Bed = document.getElementById("button4Bed");
-if(button1Bed && button2Bed && button3Bed && button4Bed) 
-    {  
-        button1Bed.style.setProperty('background', 'rgba(75, 0, 130, 1)');
-        button2Bed.style.setProperty('background', 'rgba(75, 0, 130, 1)');
-        button3Bed.style.setProperty('background', 'rgba(75, 0, 130, 1)');
-        button4Bed.style.setProperty('background', 'rgba(75, 0, 130, 1)');
-        button1Bed.addEventListener('click', () => {
-            noBedrooms = 1;
-            button1Bed.style.setProperty('background', 'rgba(48, 0, 83, 1)');
-            button2Bed.style.setProperty('background', 'rgba(75, 0, 130, 1)');
-            button3Bed.style.setProperty('background', 'rgba(75, 0, 130, 1)');
-            button4Bed.style.setProperty('background', 'rgba(75, 0, 130, 1)');
-        });
-        button2Bed.addEventListener('click', () => {
-            noBedrooms = 2;
-            button2Bed.style.setProperty('background', 'rgba(48, 0, 83, 1)');
-            button1Bed.style.setProperty('background', 'rgba(75, 0, 130, 1)');
-            button3Bed.style.setProperty('background', 'rgba(75, 0, 130, 1)');
-            button4Bed.style.setProperty('background', 'rgba(75, 0, 130, 1)');
-        });
-        button3Bed.addEventListener('click', () => {
-            noBedrooms = 3;
-            button3Bed.style.setProperty('background', 'rgba(48, 0, 83, 1)');
-            button1Bed.style.setProperty('background', 'rgba(75, 0, 130, 1)');
-            button2Bed.style.setProperty('background', 'rgba(75, 0, 130, 1)');
-            button4Bed.style.setProperty('background', 'rgba(75, 0, 130, 1)');
-        });
-        button4Bed.addEventListener('click', () => {
-            noBedrooms = 4;
-            button4Bed.style.setProperty('background', 'rgba(48, 0, 83, 1)');
-            button1Bed.style.setProperty('background', 'rgba(75, 0, 130, 1)');
-            button2Bed.style.setProperty('background', 'rgba(75, 0, 130, 1)');
-            button3Bed.style.setProperty('background', 'rgba(75, 0, 130, 1)');
-        });
-    }
-
-let button1Bath = document.getElementById("button1Bath");
-let button2Bath = document.getElementById("button2Bath");
-if(button1Bath && button2Bath) 
-    {  
-        button1Bath.style.setProperty('background', 'rgba(0, 104, 60, 1)');
-        button2Bath.style.setProperty('background', 'rgba(0, 104, 60, 1)');
+    for (let i = 1; i <= count; i++) {
+        const btnId = `${groupIdPrefix}${i}${suffix}`; // e.g., button1Bed
+        const btn = document.getElementById(btnId);
         
-        button1Bath.addEventListener('click', () => {
-            noBathrooms = 1;
-            button1Bath.style.setProperty('background', 'rgba(0, 66, 38, 1)');
-            button2Bath.style.setProperty('background', 'rgba(0, 104, 60, 1)');
-        });
-        button2Bath.addEventListener('click', () => {
-            noBathrooms = 2;
-            button2Bath.style.setProperty('background', 'rgba(0, 66, 38, 1)');
-            button1Bath.style.setProperty('background', 'rgba(0, 104, 60, 1)');
-        });
+        if (btn) {
+            btn.addEventListener('click', () => {
+                // Update State
+                designState[stateKey] = i;
+
+                // Update Visuals: Loop through all siblings in this group
+                for (let j = 1; j <= count; j++) {
+                    const siblingId = `${groupIdPrefix}${j}${suffix}`;
+                    const sibling = document.getElementById(siblingId);
+                    
+                    if (sibling) {
+                        if (j === i) {
+                            // Active State
+                            sibling.classList.add('active'); 
+                            sibling.classList.remove('btn-outline-primary');
+                            sibling.classList.add('btn-primary');
+                        } else {
+                            // Inactive State
+                            sibling.classList.remove('active');
+                            sibling.classList.remove('btn-primary');
+                            sibling.classList.add('btn-outline-primary');
+                        }
+                    }
+                }
+            });
+        }
     }
+};
 
-let buttonGenerate = document.getElementById("buttonGenerate");
-if(buttonGenerate) 
-    {  
-        buttonGenerate.addEventListener('click', () => {
-           // planner2D.clearBoard();
-            length = parseInt((<HTMLInputElement>document.getElementById("designerLength")).value);
-            width = parseInt((<HTMLInputElement>document.getElementById("designerWidth")).value);
+setupGroupSelect('button', 4, 'bedrooms');
+setupGroupSelect('button', 2, 'bathrooms');
 
-            totalRooms = noBathrooms + noBedrooms;
-            if(hallway) totalRooms += 1;
-            if(openSpace) totalRooms += 1;
-            else totalRooms += 2;
-            console.log(openSpace + " " + noBedrooms + " " + noBathrooms + " " +totalRooms + " ; length: " + length + " ; width: " + width);
-            designer.createHousePlan(length, width, totalRooms);
-            designer.buildModel(planner2D);
-        });
-    }
+// Generate Plan
+const btnGenerate = document.getElementById('buttonGenerate');
+if (btnGenerate) {
+    btnGenerate.addEventListener('click', () => {
+        planner2D.clearBoard();
+        
+        const lenInput = document.getElementById("designerLength") as HTMLInputElement;
+        const widInput = document.getElementById("designerWidth") as HTMLInputElement;
+        
+        const length = parseInt(lenInput?.value) || 1500; // Default fallback
+        const width = parseInt(widInput?.value) || 1000;
 
+        let totalRooms = designState.bedrooms + designState.bathrooms;
+        if (designState.hallway) totalRooms += 1;
+        if (designState.openSpace) totalRooms += 1; else totalRooms += 2;
 
+        console.log(`Generating: ${length}x${width}, Rooms: ${totalRooms}`);
+        
+        designer.createHousePlan(length, width, totalRooms);
+        designer.buildModel(planner2D);
+    });
+}

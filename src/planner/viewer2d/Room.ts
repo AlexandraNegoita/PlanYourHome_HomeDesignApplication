@@ -246,11 +246,11 @@ export class Room extends PIXI.Graphics {
 
 
     createRoom(walls: {startPoint: {coordX: number, coordY:number}; endPoint: {coordX: number, coordY:number};}[]){
-         this.stroke({ width: this.lineTempWidth, color: this.lineTempColor });
+         this.clear();  
+        this.stroke({ width: this.lineTempWidth, color: this.lineTempColor });
         this.moveTo(walls[0].startPoint.coordX, walls[0].startPoint.coordY);
-       // console.log("-------------------------");
-       this.clear();
-       console.log("aaa");
+        console.log("aaa");
+
         walls.forEach(wall => {
            //console.log("wall: " + wall.startPoint.coordX + " " + wall.startPoint.coordY + ", " + wall.endPoint.coordX + " " + wall.endPoint.coordY)
             this.lineTo(wall.startPoint.coordX, wall.startPoint.coordY);

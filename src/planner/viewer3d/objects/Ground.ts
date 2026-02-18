@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { Board } from '../viewer2d/Board';
-import { TextureManager } from './TextureManager';
+import { Board } from '../../viewer2d/Board';
+import { TextureManager } from '../TextureManager';
 
 export class Ground {
-    buildGround(board: Board, textures: TextureManager) : THREE.Mesh {
+    buildGround(board: Board, textures: TextureManager) : THREE.Object3D {
         textures.groundTextureLoaded.groundCOL.wrapS = THREE.RepeatWrapping;
         textures.groundTextureLoaded.groundCOL.wrapT = THREE.RepeatWrapping;
         textures.groundTextureLoaded.groundCOL.repeat.set( 70, 70 );
