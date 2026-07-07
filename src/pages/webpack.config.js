@@ -27,7 +27,7 @@ export default {
     new HtmlWebpackPlugin({
       title: 'Planner Page',
       template: 'index.html',
-      filename: 'planner-page.html'
+      filename: 'index.html'
     }),
     new CopyPlugin({
       patterns: [
