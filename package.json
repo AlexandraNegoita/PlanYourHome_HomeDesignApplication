@@ -12,7 +12,7 @@
     "assets": "tsx src/pages/generate-assets.ts && tsx src/pages/generate-textures.ts",
     "app": "cd app-planner && npm run build && cp --recursive dist ../src/views",
     "start": "node src",
-    "deploy-frontend": "npm run build && gh-pages -d build",
+    "deploy-frontend": "npm run build && gh-pages -d build/src/pages",
     "local": "npm run build && npx tsx src",
     "local:watch": "nodemon -e ts,json --exec \"npm run local\""
   },
