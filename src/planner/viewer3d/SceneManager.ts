@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { CSG } from 'three-csg-ts';
 import { Model } from '../model/Model';
 import { TextureManager } from './TextureManager';
 
@@ -9,6 +10,8 @@ import { Window } from './objects/Window';
 import { Roof } from './objects/Roof';
 import { Floor } from './objects/Floor';
 import { Renderer } from './Renderer';
+import { Furniture } from './objects/Furniture'; 
+import { Utils } from './Utils';
 
 export class SceneManager {
   private walls: Wall;
@@ -16,9 +19,9 @@ export class SceneManager {
   private windows: Window;
   private roof: Roof;
   private floors: Floor;
+  private furniture: Furniture;
 
   private objectCache: Map<string, THREE.Object3D> = new Map();
-  
 
   constructor(
     private model: Model,
@@ -32,6 +35,7 @@ export class SceneManager {
     this.walls = new Wall(model, materials.textures, this.materials);
     this.roof = new Roof(model, materials.textures, this.materials);
     this.floors = new Floor(model, materials.textures, this.materials);
+    this.furniture = new Furniture();
   }
 
   //walls
@@ -43,13 +47,42 @@ export class SceneManager {
       let dist = this.model.calculateWallLengthRatio(wallData.wall.wallID);
       if (!dist) return;
 
-      const wallObj = this.walls.buildWall(wallData, dist);
+      let wallObj = this.walls.buildWall(wallData, dist) as THREE.Mesh; 
       if (!wallObj) return;
 
+      wallObj.updateMatrix();
+
+      // --- CSG: PUNCH WINDOW HOLES ---
+      this.model.objects.windows.forEach(windowData => {
+        if (windowData.window.partOfWall === wallData.wall.wallID) {
+          const height = this.walls.utils.calculateRatio(wallData.wall.wallHeight);
+          const thickness = 0.5;
+
+          let orientation = '';
+          let angle = 0;
+          if (wallData.wall.startPoint.coordX == wallData.wall.endPoint.coordX) {
+            orientation = 'vertical';
+            angle = Math.PI / 2;
+          } else if (wallData.wall.startPoint.coordY == wallData.wall.endPoint.coordY) {
+            orientation = 'horizontal';
+          } else {
+            orientation = 'diagonal';
+            angle = this.walls.utils.checkAngle(
+              wallData.wall.startPoint.coordX, wallData.wall.startPoint.coordY,
+              wallData.wall.endPoint.coordX, wallData.wall.endPoint.coordY
+            );
+          }
+
+          const cutter = this.windows.buildHoleCutter(windowData, wallData.wall.wallID, height, thickness, orientation, angle);
+          if (cutter) {
+            wallObj = CSG.subtract(wallObj, cutter);
+          }
+        }
+      });
+      
       this.objectCache.set(key, wallObj);
       this.renderer.addObject(wallObj);
 
-      // Now load windows & doors for THIS wall
       this.loadWindowsForWall(wallData, dist);
       this.loadDoorsForWall(wallData, dist);
     });
@@ -95,13 +128,7 @@ export class SceneManager {
       if (this.objectCache.has(key)) return;
 
       const windowObj = this.windows.buildWindow(
-        windowData,
-        wallID,
-        dist + thickness,
-        this.walls.utils.calculateRatio(wallData.wall.wallHeight),
-        thickness,
-        orientation,
-        angle
+        windowData, wallID, dist, this.walls.utils.calculateRatio(wallData.wall.wallHeight), thickness, orientation, angle
       );
 
       if (!windowObj) return;
@@ -109,15 +136,8 @@ export class SceneManager {
       this.objectCache.set(key, windowObj);
       this.renderer.addObject(windowObj);
 
-      // Window frame
       const frameObj = this.windows.buildWindowFrame(
-        windowData,
-        wallID,
-        dist + thickness,
-        this.walls.utils.calculateRatio(wallData.wall.wallHeight),
-        thickness,
-        orientation,
-        angle
+        windowData, wallID, dist + thickness, this.walls.utils.calculateRatio(wallData.wall.wallHeight), thickness, orientation, angle
       );
 
       if (frameObj) {
@@ -145,10 +165,8 @@ export class SceneManager {
     } else {
       orientation = 'diagonal';
       angle = this.walls.utils.checkAngle(
-        wallData.wall.startPoint.coordX,
-        wallData.wall.startPoint.coordY,
-        wallData.wall.endPoint.coordX,
-        wallData.wall.endPoint.coordY
+        wallData.wall.startPoint.coordX, wallData.wall.startPoint.coordY,
+        wallData.wall.endPoint.coordX, wallData.wall.endPoint.coordY
       );
     }
 
@@ -159,13 +177,7 @@ export class SceneManager {
       if (this.objectCache.has(key)) return;
 
       const doorObj = this.doors.buildDoor(
-        doorData,
-        wallID,
-        dist + thickness,
-        height,
-        thickness,
-        orientation,
-        angle
+        doorData, wallID, dist + thickness, height, thickness, orientation, angle
       );
 
       if (!doorObj) return;
@@ -173,15 +185,8 @@ export class SceneManager {
       this.objectCache.set(key, doorObj);
       this.renderer.addObject(doorObj);
 
-      // door frame
       const frameObj = this.doors.buildDoorFrame(
-        doorData,
-        wallID,
-        dist + thickness,
-        height,
-        thickness,
-        orientation,
-        angle
+        doorData, wallID, dist + thickness, height, thickness, orientation, angle
       );
 
       if (frameObj) {
@@ -227,22 +232,18 @@ export class SceneManager {
     this.renderer.addObject(roofObj);
   }
 
-  
-
   toggleShowRoof(showRoof: boolean){
-        console.log(showRoof);
-        if(this.model.roof.length > 0) {
-            let roof = this.roof.buildRoof();
-            if(roof) {
-                if(showRoof == true) {
-                    this.loadRoof();
-                } else {
-                    this.unloadRoof();
-                }
-            }
-            
-        }
-    }
+      if(this.model.roof.length > 0) {
+          let roof = this.roof.buildRoof();
+          if(roof) {
+              if(showRoof == true) {
+                  this.loadRoof();
+              } else {
+                  this.unloadRoof();
+              }
+          }
+      }
+  }
 
   unloadRoof() {
     const key = "roof";
@@ -251,6 +252,51 @@ export class SceneManager {
 
     this.renderer.removeObject(obj);
     this.objectCache.delete(key);
+  }
+
+  loadFurniture() {
+    console.log("Checking for furniture in model...", this.model.objects);
+
+    if (!this.model.objects.furniture || this.model.objects.furniture.length === 0) {
+        console.warn("No furniture found in the model data!");
+        return;
+    }
+
+    const utils = new Utils();
+
+    this.model.objects.furniture.forEach(async (furnData: any) => {
+        console.log("Processing furniture piece:", furnData);
+
+        const key = `furniture_${furnData.piece.pieceID}`;
+        if (this.objectCache.has(key)) return;
+
+        // Correctly mapped coordinates
+        const posX = utils.calculateRatio(furnData.piece.centerPoint.coordX);
+        const posY = utils.calculateRatio(furnData.piece.centerPoint.coordY);
+
+        const objType = furnData.piece.typeID || 'couch'; 
+        
+        try {
+            const obj3D = await this.furniture.buildFurniture(objType);
+            if (!obj3D) return;
+
+            obj3D.position.set(posX, posY, 0.1);
+            obj3D.rotation.x = Math.PI / 2;
+            if (furnData.piece.rotation !== undefined) {
+                // No conversion needed! Just apply the PixiJS radian value.
+                // We still subtract Math.PI / 2 (90 degrees) to fix the 3D model's default orientation.
+                obj3D.rotation.y = furnData.piece.rotation + (Math.PI); 
+            }
+
+            this.objectCache.set(key, obj3D);
+            // By only using `this.renderer.addObject(obj3D)`, it's officially on the same layer!
+            this.renderer.addObject(obj3D);
+            console.log(`Successfully added ${objType} to 3D scene!`);
+            
+        } catch (error) {
+            console.error("Error loading .obj or .mtl file:", error);
+        }
+    });
   }
 
   updateMaterials() {
@@ -264,8 +310,7 @@ export class SceneManager {
             }
         }
     });
-}
-
+  }
 
   reset() {
     this.objectCache.forEach(obj => this.renderer.removeObject(obj));

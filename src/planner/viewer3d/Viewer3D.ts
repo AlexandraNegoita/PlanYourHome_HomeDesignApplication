@@ -294,8 +294,47 @@ export class Viewer3D {
         }
     }
 
+    // private snapObjectFlushToWall(obj: THREE.Object3D, wall: THREE.Object3D) {
+    //     // Wall thickness is 10 → half is 5
+    //     const halfThickness = 5;
+
+    //     // Move object into wall local space
+    //     wall.worldToLocal(obj.position);
+
+    //     // Push object backwards along wall's local Z axis
+    //     obj.position.z = 0;                // reset any drift
+    //     obj.position.z -= halfThickness;   // push into the wall
+
+    //     // Return to world space
+    //     wall.localToWorld(obj.position);
+    // }
 
 
+    // private alignObjectsToWalls() {
+    //     const house: any = (this.renderer as any).house || this.renderer.house;
+    //     if (!house) return;
+
+    //     const wallMeshes = house.children.filter((obj: any) => obj.userData && obj.userData.wallID !== undefined);
+    //     const objectMeshes = house.children.filter((obj: any) => obj.userData && obj.userData.partOfWall !== undefined);
+
+    //     objectMeshes.forEach((obj: any) => {
+    //         const wallID = obj.userData.partOfWall;
+    //         const wall = wallMeshes.find((w: any) => w.userData.wallID === wallID);
+    //         if (!wall) return;
+
+    //         // Wall's normal in world space (its local +Z axis)
+    //         const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(wall.quaternion).normalize();
+
+    //         // Vector from wall center to object
+    //         const v = new THREE.Vector3().subVectors(obj.position, wall.position);
+
+    //         // Signed distance from object to wall plane along the wall normal
+    //         const d = v.dot(normal);
+
+    //         // Move object back onto the wall plane (center on plane)
+    //         obj.position.addScaledVector(normal, -d);
+    //     });
+    // }
 
     run() {
 
@@ -308,6 +347,7 @@ export class Viewer3D {
         this.sceneManager.loadFloors();
         if (this.showRoof) this.sceneManager.loadRoof();
 
+        this.sceneManager.loadFurniture();
         this.materials.updateWallMaterial();
         this.materials.updateFloorMaterial();
         this.materials.updateRoofMaterial();
@@ -317,8 +357,13 @@ export class Viewer3D {
 
         this.setupCamera();
         this.setupLighting();
+
+        //this.alignObjectsToWalls();
+
         this.renderer.getRenderer().setAnimationLoop(this.animate);
+        console.log(this.renderer.getInfo());
     }
+
 
     resetColorPicker() {
         const colorPicker = document.getElementById("colorPicker") as HTMLInputElement;

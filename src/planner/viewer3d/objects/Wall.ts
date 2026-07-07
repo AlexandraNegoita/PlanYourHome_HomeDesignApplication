@@ -17,54 +17,57 @@ export class Wall {
 
   buildWall(wallData: any, dist: number): THREE.Object3D | null {
     let orientation = '';
-    let wallGeometry: THREE.BoxGeometry;
     let angle: number = 0;
     const thickness = 0.5;
-      wallGeometry = new THREE.BoxGeometry(dist + thickness - 0.1, thickness, this.utils.calculateRatio(wallData.wall.wallHeight));
+    
+    const wallHeight = this.utils.calculateRatio(wallData.wall.wallHeight);
+    let wallGeometry = new THREE.BoxGeometry(dist + thickness - 0.1, thickness, wallHeight);
 
-      if (wallData.wall.startPoint.coordX == wallData.wall.endPoint.coordX) {
-        // vertical
-        orientation = 'vertical';
-        wallGeometry.rotateZ(Math.PI / 2);
-        angle = Math.PI / 2;
-      } else if (wallData.wall.startPoint.coordY == wallData.wall.endPoint.coordY) {
-        // orizontal
-        orientation = 'horizontal';
-      } else {
-        // diagonal
-        orientation = 'diagonal';
-        wallGeometry?.rotateZ(this.utils.checkAngle(wallData.wall.startPoint.coordX, wallData.wall.startPoint.coordY, wallData.wall.endPoint.coordX, wallData.wall.endPoint.coordY));
-        angle = this.utils.checkAngle(wallData.wall.startPoint.coordX, wallData.wall.startPoint.coordY, wallData.wall.endPoint.coordX, wallData.wall.endPoint.coordY);
-      }
+    
+    
+    const repeatX = dist / 4;
+    const repeatY = wallHeight / 4; 
+    
+    const uvs = wallGeometry.attributes.uv;
+    for (let i = 0; i < uvs.count; i++) {
+        const u = uvs.getX(i);
+        const v = uvs.getY(i);
+        uvs.setXY(i, u * repeatX, v * repeatY);
+    }
 
-      let middle = this.model.calculateMiddleRatio(wallData.wall.wallID);
-      if (middle) wallGeometry?.translate(middle.coordX, middle.coordY, this.utils.calculateRatio(wallData.wall.wallHeight) / 2);
-
-      let wall;
-      if (wallGeometry && dist) {
-        const materialID = this.textures.wallTextureSelected;
-        const mat = this.materials.wallMaterial(materialID);
-        console.log("WALL - > Material ID:", materialID, "Loaded:", mat);
-
-        if (mat instanceof THREE.MeshStandardMaterial) {
-          mat.map?.repeat.set(dist / 4, 1);
-          mat.normalMap?.repeat.set(dist / 4, 1);
-          mat.displacementMap?.repeat.set(dist / 4, 1);
-
-          wall = new THREE.Mesh(wallGeometry, mat);
+    if (wallData.wall.startPoint.coordX == wallData.wall.endPoint.coordX) {
       
-          wall.position.z = 0;
-          return wall;
-        }
+      orientation = 'vertical';
+      wallGeometry.rotateZ(Math.PI / 2);
+      angle = Math.PI / 2;
+    } else if (wallData.wall.startPoint.coordY == wallData.wall.endPoint.coordY) {
+      
+      orientation = 'horizontal';
+    } else {
+      
+      orientation = 'diagonal';
+      angle = this.utils.checkAngle(wallData.wall.startPoint.coordX, wallData.wall.startPoint.coordY, wallData.wall.endPoint.coordX, wallData.wall.endPoint.coordY);
+      wallGeometry.rotateZ(angle);
+    }
 
-         
-          // if (dist)
-          //   this.windows.buildWindows(wallData.wall.wallID, dist + thickness, this.utils.calculateRatio(wallData.wall.wallHeight), thickness, orientation, angle);
-          // if (dist)
-          //   this.doors.buildDoors(wallData.wall.wallID, dist + thickness, this.utils.calculateRatio(wallData.wall.wallHeight), thickness, orientation, angle);
-          //this.house.add(wall);
-         
+    let middle = this.model.calculateMiddleRatio(wallData.wall.wallID);
+    if (middle) wallGeometry.translate(middle.coordX, middle.coordY, wallHeight / 2);
+
+    let wall;
+    if (wallGeometry && dist) {
+      const materialID = this.textures.wallTextureSelected;
+      const baseMat = this.materials.wallMaterial(materialID);
+
+      if (baseMat instanceof THREE.MeshStandardMaterial) {
+        
+        
+        
+        wall = new THREE.Mesh(wallGeometry, baseMat);
+        wall.position.z = 0;
+        
+        return wall;
       }
+    }
     return null;
   }
 }

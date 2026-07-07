@@ -5,7 +5,8 @@ import { Wall } from "../viewer2d/Wall";
     rooms: {
         room: {
             roomID: number,
-            wallsID: number[]
+            wallsID: number[],
+            roomType?: string
         }
     }[];
     walls: { 
@@ -79,7 +80,18 @@ import { Wall } from "../viewer2d/Wall";
                 partOfWall: number
             }
         }[],
-        furniture: {}[]
+        furniture: {
+            piece: {
+                pieceID: number,
+                typeID: number,
+                rotation: number,
+                centerPoint: {
+                    coordX: number,
+                    coordY: number
+                },
+                partOfRoom: number
+            }
+        }[]
     }
  }
  

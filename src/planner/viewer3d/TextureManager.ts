@@ -29,21 +29,21 @@ export class TextureManager {
         roofHGT: string
     }} = {};
 
-    // ⭐ FIX: window textures per ID
+    
     windowTexturePath: { [id: string]: {
         winCOL: string,
         winNRM: string,
         winHGT: string
     }} = {};
 
-    // ⭐ FIX: door frame textures per ID
+    
     doorFrameTexturePath: { [id: string]: {
         dfCOL: string,
         dfNRM: string,
         dfHGT: string
     }} = {};
 
-    // ⭐ FIX: door textures per ID
+    
     doorTexturePath: { [id: string]: {
         doorCOL: string,
         doorNRM: string,
@@ -76,21 +76,21 @@ export class TextureManager {
         roofHGT: THREE.Texture
     }} = {};
 
-    // ⭐ FIX: window textures per ID
+    
     windowTextureLoaded: { [id: string]: {
         winCOL: THREE.Texture,
         winNRM: THREE.Texture,
         winHGT: THREE.Texture
     }} = {};
 
-    // ⭐ FIX: door frame textures per ID
+    
     doorFrameTextureLoaded: { [id: string]: {
         dfCOL: THREE.Texture,
         dfNRM: THREE.Texture,
         dfHGT: THREE.Texture
     }} = {};
 
-    // ⭐ FIX: door textures per ID
+    
     doorTextureLoaded: { [id: string]: {
         doorCOL: THREE.Texture,
         doorNRM: THREE.Texture,
@@ -140,9 +140,9 @@ export class TextureManager {
         this.materialMetalness = value;
     }
 
-    // ---------------------------------------------------------
-    // FLOOR / WALL / ROOF (unchanged)
-    // ---------------------------------------------------------
+    
+    
+    
 
     addFloorTexture(id: string, type: string, path: string, texture: THREE.Texture) {
         if (!this.floorTexturePath[id]) {
@@ -195,9 +195,9 @@ export class TextureManager {
         }
     }
 
-    // ---------------------------------------------------------
-    // ⭐ FIXED WINDOW TEXTURES (per ID)
-    // ---------------------------------------------------------
+    
+    
+    
 
     addWindowTexture(id: string, type: string, path: string, texture: THREE.Texture) {
         if (!this.windowTexturePath[id]) {
@@ -216,9 +216,9 @@ export class TextureManager {
         }
     }
 
-    // ---------------------------------------------------------
-    // ⭐ FIXED DOOR FRAME TEXTURES (per ID)
-    // ---------------------------------------------------------
+    
+    
+    
 
     addDoorFrameTexture(id: string, type: string, path: string, texture: THREE.Texture) {
         if (!this.doorFrameTexturePath[id]) {
@@ -237,9 +237,9 @@ export class TextureManager {
         }
     }
 
-    // ---------------------------------------------------------
-    // ⭐ FIXED DOOR TEXTURES (per ID)
-    // ---------------------------------------------------------
+    
+    
+    
 
     addDoorTexture(id: string, type: string, path: string, texture: THREE.Texture) {
         if (!this.doorTexturePath[id]) {
@@ -288,9 +288,9 @@ export class TextureManager {
         
     }
 
-    // ---------------------------------------------------------
-    // SELECTORS
-    // ---------------------------------------------------------
+    
+    
+    
 
     selectWallTexture(id: string) { this.wallTextureSelected = id; }
     selectRoofTexture(id: string) { this.roofTextureSelected = id; }

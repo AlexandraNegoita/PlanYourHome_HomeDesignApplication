@@ -1,36 +1,66 @@
 import * as PIXI from "pixi.js";
 import { Coordinates } from './Coordinates';
+
 export class Board extends PIXI.Graphics {
-    points: Coordinates[] = [];
-    lines: number = 0;
-    cols: number = 0;
-    constructor (geometry?: PIXI.GraphicsContext) {
+    points: Coordinates[] = []; 
+    gridSprite!: PIXI.TilingSprite;
+
+    constructor(geometry?: PIXI.GraphicsContext) {
         super(geometry);
     }
-    async drawBoard(app: PIXI.Application, backgroundLayer:PIXI.Container ) {
-        // const texture = await PIXI.Assets.load(imgPath);
 
-        // const img = new PIXI.TilingSprite({
-        //     texture,
-        //     width: this.screen.width,
-        //     height: this.screen.height,
-        // });
-        // this.renderer.events.cursorStyles.default = 'crosshair';
-        // this.backgroundLayer.addChild(img);
+    async drawBoard(app: PIXI.Application, backgroundLayer: PIXI.Container) {
+        app.renderer.events.cursorStyles.default = 'crosshair';
+
+        
         let bg = new PIXI.Sprite(PIXI.Texture.WHITE);
         bg.width = app.screen.width;
         bg.height = app.screen.height;
         bg.tint = 0xE0FFFF;
         backgroundLayer.addChild(bg);
-        app.renderer.events.cursorStyles.default = 'crosshair';
-        for (let i = 0; i < app.screen.width; i+=30) {
-            for(let j = 0; j < app.screen.height; j+=30){
-                let point = new PIXI.Graphics()
-                    .circle(i, j, 1)
-                    .fill(0x4682B4);
-                this.points.push(new Coordinates(i, j));
-                backgroundLayer.addChild(point);
-            }
+
+        
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = 30;
+        canvas.height = 30;
+        const ctx = canvas.getContext('2d')!;
+        
+        ctx.fillStyle = '#4682B4';
+        const radius = 1.5;
+
+        
+        
+        const drawDot = (x: number, y: number) => {
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+        };
+
+        drawDot(0, 0);
+        drawDot(30, 0);
+        drawDot(0, 30);
+        drawDot(30, 30);
+
+        
+        const gridTexture = PIXI.Texture.from(canvas);
+
+        
+        this.gridSprite = new PIXI.TilingSprite({
+            texture: gridTexture,
+            width: app.screen.width,
+            height: app.screen.height,
+        });
+        
+        backgroundLayer.addChild(this.gridSprite);
+    }
+
+    
+    syncGridToCamera(x: number, y: number, scale: number) {
+        if (this.gridSprite) {
+            this.gridSprite.tilePosition.x = x;
+            this.gridSprite.tilePosition.y = y;
+            this.gridSprite.tileScale.set(scale);
         }
     }
 }

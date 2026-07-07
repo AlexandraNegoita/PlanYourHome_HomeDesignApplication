@@ -1,4 +1,6 @@
 import * as PIXI from "pixi.js";
+import { FurnitureItem } from "../../pages/generated-assets";
+
 
 export class SpriteManager {
     windowPath: string = '';
@@ -25,4 +27,18 @@ export class SpriteManager {
     getDoorTexture() {
         return this.doorTexture;
     }
+
+    async createFurnitureTexture(furnitureAsset: FurnitureItem) {
+        let texture = await PIXI.Assets.load(furnitureAsset.floorplanPath);
+        furnitureAsset.floorplanTexture = texture;
+    }
+
+    async setFurniturePaths(furnitureAssets: FurnitureItem[]) {
+        for (let asset of furnitureAssets) {
+            this.createFurnitureTexture(asset);
+        }
+    }
+
+    
+
 }

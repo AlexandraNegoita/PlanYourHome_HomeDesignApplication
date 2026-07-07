@@ -61,6 +61,84 @@ body, html {
   font-size: 24px;
 }
 
+/* --- ZOOM BUTTONS (Matches #openMenu style) --- */
+.zoom-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--primary-bg);
+  border: 2px solid var(--accent-color);
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease, background 0.3s;
+  font-weight: bold;
+  font-size: 28px;
+  padding: 0;
+  line-height: 1; /* Keeps the + and - perfectly vertically centered */
+}
+
+.zoom-btn:hover {
+  transform: scale(1.1);
+  background: var(--secondary-bg);
+}
+
+#furnitureMenuPanel {
+    position: fixed;
+    top: 0;
+    right: -400px;
+    width: 350px;
+    height: 100%;
+    background: rgba(45, 73, 105, 0.95);
+    padding: 20px;
+    z-index: 200;
+    overflow-y: auto;
+    transition: right 0.3s ease;
+}
+
+#furnitureMenuPanel.is-active {
+    right: 0;
+}
+
+/* Grid layout */
+#furnitureContainer {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+/* Square icon buttons */
+.furniture-item {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.furniture-item:hover {
+    background: rgba(255,255,255,0.15);
+}
+
+.furniture-item.active {
+    background: rgba(255,255,255,0.25);
+}
+
+.furniture-item img {
+    width: 70%;
+    height: 70%;
+    object-fit: contain;
+}
+
+
+
 /* --- MAIN CONFIGURATION MENU --- */
 #configurationMenu {
   position: fixed;

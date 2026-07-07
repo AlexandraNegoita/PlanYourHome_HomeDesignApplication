@@ -3,11 +3,15 @@ import { Wall } from './Wall';
 import { Board } from './Board';
 import { Model } from '../model/Model';
 import { GripPoint } from './GripPoint';
-import { Coordinates } from './Coordinates';
+import { Coordinates, SnapMode } from './Coordinates';
 import { Room } from './Room';
 import { SpriteManager } from './SpriteManager';
 import { Roof } from './Roof';
 import { Plan } from '../model/Parser';
+import { Door } from './Door';
+import { Window } from './Window';
+import { FurnitureItem } from '../../pages/generated-assets';
+import { Furniture } from './Furniture';
 
 export enum editMode {
     NONE,
@@ -15,8 +19,10 @@ export enum editMode {
     GRIPPOINT,
     WINDOW,
     DOOR,
+    FURNITURE,
     ROOF
 }
+
 export class Viewer2D extends PIXI.Application {
     spriteManager: SpriteManager = new SpriteManager();
     walls : Wall[] = [];
@@ -39,6 +45,10 @@ export class Viewer2D extends PIXI.Application {
     edit: editMode = editMode.NONE;
     gripPoints: GripPoint[] = [];
     coords: Coordinates = new Coordinates();
+
+    world = new PIXI.Container();
+    isPanning: boolean = false;
+    lastPanPosition = {x: 0, y: 0};
     
     get canvas(): HTMLCanvasElement {
         return super.canvas;
@@ -51,34 +61,60 @@ export class Viewer2D extends PIXI.Application {
     }
     
     async setup(spriteManager: SpriteManager) {
-        this.spriteManager = spriteManager;
+       this.spriteManager = spriteManager;
        this.stage.addChild(this.backgroundLayer);
        this.board.drawBoard(this, this.backgroundLayer);
+       
+       this.stage.addChild(this.world);
        this.wall.setup(this.model, this.board, this.spriteManager);
-     //  console.log(this.board.points);
-       this.stage.addChild(this.roomsLayer);
-       this.stage.addChild(this.wallsLayer);
-       this.stage.addChild(this.roofLayer);
-       this.stage.addChild(this.gripPointsLayer);
-       this.stage.addChild(this.objectsLayer);
+       this.world.addChild(this.roomsLayer);
+       this.world.addChild(this.wallsLayer);
+       this.world.addChild(this.roofLayer);
+       this.world.addChild(this.gripPointsLayer);
+       this.world.addChild(this.objectsLayer);
        this.objectsLayer.addChild(this.wall.getObjects());
        this.wall.addChild(this.wall.getObjects());
 
        this.objectsLayer.addChild(this.roof.getObjects());
        this.roof.addChild(this.roof.getObjects());
        
-       this.room.setup(this.model, this.board);
+       this.room.setup(this.model, this.board, this.spriteManager, this.coords.mode);
        this.wallsLayer.addChild(this.wall);
        this.roofLayer.addChild(this.roof);
+
+       this.stage.hitArea = new PIXI.Rectangle(0, 0, this.canvas.width, this.canvas.height);
+
+       this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+       
+       this.bindZoomButtons();
+
        if(this.editMode == false) {
             this.stage.eventMode = 'dynamic';
        } else {
             this.stage.eventMode = "passive";
             this.stage.interactive = false;
        }
+
+       this.stage.on('rightdown', (e) => {
+            this.isPanning = true;
+            this.lastPanPosition = { x: e.global.x, y: e.global.y };
+            this.canvas.style.cursor = 'grabbing';
+       });
+
+       this.stage.on('rightup', (e) => {
+            this.isPanning = false;
+            this.canvas.style.cursor = 'crosshair';
+       });
+
+       this.stage.on('rightupoutside', (e) => {
+            this.isPanning = false;
+            this.canvas.style.cursor = 'crosshair';
+       });
        
        this.isMouseDown = false;
-       this.stage.on('mousedown',  (e) => {
+       this.stage.on('mousedown',  (e) => { 
+            const localPos = e.data.getLocalPosition(this.world);
+
             if(this.edit == editMode.NONE) {
                 if(this.isMouseDown == true) {
                     this.isMouseDown = false;
@@ -86,19 +122,18 @@ export class Viewer2D extends PIXI.Application {
                         this.wallsLayer.addChild(this.wall.getGripPoints());
                         this.objectsLayer.addChild(this.wall.getObjects());
                         this.wall.addChild(this.wall.getObjects());
-                        this.tryPermanentGripPoint(e.data.global.x, e.data.global.y);
-                        this.wall.drawPermanent(e.data.global.x, e.data.global.y);
+                        this.tryPermanentGripPoint(localPos.x, localPos.y);
+                        this.wall.drawPermanent(localPos.x, localPos.y);
                         this.gripPointsLayer.addChild(this.wall.getGripPoints());
                         this.updateRooms();
-                        this.wall.tryRoom(e.data.global.x, e.data.global.y);
+                        this.wall.tryRoom(localPos.x, localPos.y);
                     } else {
-                        this.room.drawPermanentRoom(e.data.global.x, e.data.global.y);
+                        this.room.drawPermanentRoom(localPos.x, localPos.y);
                         this.wallsLayer.addChild(this.room.getWalls());
                         this.gripPointsLayer.addChild(this.room.getGripPoints());
-                        this.objectsLayer.addChild(this.wall.getObjects());
-                        this.tryPermanentGripPoint(e.data.global.x, e.data.global.y);
+                        this.objectsLayer.addChild(this.room.getObjects());
+                        this.tryPermanentGripPoint(localPos.x, localPos.y);
                     }
-                    
                 } 
                 if(this.drawMode == 'wall') {
                     this.wall = new Wall();
@@ -107,20 +142,21 @@ export class Viewer2D extends PIXI.Application {
                     this.wallsLayer.addChild(this.wall);
                     this.walls.push(this.wall);
                     this.gripPointsLayer.addChild(this.wall.getGripPoints());
-                    this.wall.moveToPoint( e.data.global.x, e.data.global.y);
-                    this.wall.drawTemporary(e.data.global.x, e.data.global.y);
+                    this.wall.moveToPoint(localPos.x, localPos.y);
+                    this.wall.drawTemporary(localPos.x, localPos.y);
                 } else {
                     this.room = new Room();
-                    this.room.setup(this.model, this.board);
+                    this.room.setup(this.model, this.board, this.spriteManager, this.coords.mode);
                     this.roomsLayer.addChild(this.room);
                     this.wallsLayer.addChild(this.room.getWalls());
                     this.rooms.push(this.room);
                     this.gripPointsLayer.addChild(this.room.getGripPoints());
+
+                    this.objectsLayer.addChild(this.room.getObjects());
                     
-                    this.room.moveToPoint(e.data.global.x, e.data.global.y);
-                    this.room.drawTemporaryRoom(e.data.global.x, e.data.global.y);
+                    this.room.moveToPoint(localPos.x, localPos.y);
+                    this.room.drawTemporaryRoom(localPos.x, localPos.y);
                 }
-                //console.log('Mouse clicked: ' + this.wall.drawPosition);
                 this.isMouseDown = true;
             } else if(this.edit == editMode.ROOF) {
                 if(this.isMouseDown == true) {
@@ -128,11 +164,11 @@ export class Viewer2D extends PIXI.Application {
                         this.roofLayer.addChild(this.roof.getGripPoints());
                         this.objectsLayer.addChild(this.roof.getObjects());
                         this.roof.addChild(this.roof.getObjects());
-                        this.tryPermanentGripPoint(e.data.global.x, e.data.global.y);
-                        this.roof.drawPermanent(e.data.global.x, e.data.global.y);
+                        this.tryPermanentGripPoint(localPos.x, localPos.y);
+                        this.roof.drawPermanent(localPos.x, localPos.y);
                         this.gripPointsLayer.addChild(this.roof.getGripPoints());
                         this.updateRooms();
-                        this.roof.tryRoom(e.data.global.x, e.data.global.y);
+                        this.roof.tryRoom(localPos.x, localPos.y);
                 } 
                 this.roof = new Roof();
                 this.roof.setup(this.model, this.board, this.spriteManager);
@@ -140,58 +176,63 @@ export class Viewer2D extends PIXI.Application {
                 this.roofLayer.addChild(this.roof);
                 this.roofs.push(this.roof);
                 this.gripPointsLayer.addChild(this.roof.getGripPoints());
-                this.roof.moveToPoint( e.data.global.x, e.data.global.y);
-                this.roof.drawTemporary(e.data.global.x, e.data.global.y);
+                this.roof.moveToPoint(localPos.x, localPos.y);
+                this.roof.drawTemporary(localPos.x, localPos.y);
                 this.room = new Room();
-                this.room.setup(this.model, this.board);
+                this.room.setup(this.model, this.board, this.spriteManager, this.coords.mode);
                 this.roomsLayer.addChild(this.room);
                 this.roofLayer.addChild(this.room.getWalls());
                 this.rooms.push(this.room);
                 this.gripPointsLayer.addChild(this.room.getGripPoints());
                 
-                this.room.moveToPoint(e.data.global.x, e.data.global.y);
-                this.room.drawTemporaryRoom(e.data.global.x, e.data.global.y);
-                //console.log('Mouse clicked: ' + this.wall.drawPosition);
+                this.room.moveToPoint(localPos.x, localPos.y);
+                this.room.drawTemporaryRoom(localPos.x, localPos.y);
                 this.isMouseDown = true;
             }
         });
+
         this.stage.on('mousemove', (e) => {
+            if (this.isPanning) {
+                const dx = e.global.x - this.lastPanPosition.x;
+                const dy = e.global.y - this.lastPanPosition.y;
+                
+                this.world.x += dx;
+                this.world.y += dy;
+                
+                this.lastPanPosition = { x: e.global.x, y: e.global.y };
+                this.board.syncGridToCamera(this.world.x, this.world.y, this.world.scale.x);
+                return; 
+            }
+
+            const localPos = e.data.getLocalPosition(this.world);
+
             if(this.edit == editMode.NONE) {
                 if(this.isMouseDown) {
                     if(this.drawMode == 'wall') {
-                        this.wall.drawTemporary(e.data.global.x, e.data.global.y);
+                        this.wall.drawTemporary(localPos.x, localPos.y);
                     } else {
                         this.wallsLayer.removeChild(this.room.getWalls());
-                        this.room.drawTemporaryRoom(e.data.global.x, e.data.global.y);
+                        this.room.drawTemporaryRoom(localPos.x, localPos.y);
                         this.wallsLayer.addChild(this.room.getWalls());
                     }
-                    
-                    //console.log('Mouse moved' + this.wall.drawPosition);
                 }
             } else if (this.edit == editMode.WINDOW) {
                 this.objectsLayer.addChild(this.wall.getObjects());
                 this.wall.addChild(this.wall.getObjects());
-               // console.log(this.objectsLayer);
-            }else if (this.edit == editMode.DOOR) {
+            } else if (this.edit == editMode.DOOR) {
                 this.objectsLayer.addChild(this.wall.getObjects());
                 this.wall.addChild(this.wall.getObjects());
-               // console.log(this.objectsLayer);
+            }
+            else if (this.edit == editMode.FURNITURE) {
+               // this.objectsLayer.addChild(this.wall.getObjects());
             }
             else if(this.edit == editMode.ROOF) {
                 if(this.isMouseDown) {
-                        this.roof.drawTemporary(e.data.global.x, e.data.global.y);
-                    
-                    
-                    //console.log('Mouse moved' + this.wall.drawPosition);
+                        this.roof.drawTemporary(localPos.x, localPos.y);
                 }
             }
         });
-        this.stage.on('mouseup', (e) => {
-            //console.log('Mouse released');
-            // this.isMouseDown = false;
-            // this.wall.drawPermanent(this.model,this.board, e.data.global.x, e.data.global.y);
-            // console.log('X', e.data.global.x, 'Y', e.data.global.y);
-        });
+
         this.stage.on('rightclick', (e) => {
             if(this.edit == editMode.NONE) {
                 e.preventDefault();
@@ -208,110 +249,103 @@ export class Viewer2D extends PIXI.Application {
                 e.preventDefault();
                 if(this.isMouseDown) {
                     this.roof.clearTemporary();
-                    
                     this.isMouseDown = false;
                 }
             }
         })
-        //this.ticker.add(delta=>this.update(delta));
-       // console.log(this.stage.children);
     }
 
+    // --- NEW: BIND HTML ZOOM BUTTONS ---
+    private bindZoomButtons() {
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+
+        if (zoomInBtn) zoomInBtn.onclick = () => this.handleZoom(true);
+        if (zoomOutBtn) zoomOutBtn.onclick = () => this.handleZoom(false);
+    }
+
+    // --- NEW: ZOOM LOGIC (Keep this exactly the same as before!) ---
+    private handleZoom(zoomIn: boolean) {
+        const zoomSpeed = 0.2;
+        const zoomFactor = zoomIn ? (1 + zoomSpeed) : (1 - zoomSpeed);
+
+        // Zoom directly to the center of the canvas viewport
+        const centerX = this.canvas.width / 2;
+        const centerY = this.canvas.height / 2;
+
+        const localX = (centerX - this.world.x) / this.world.scale.x;
+        const localY = (centerY - this.world.y) / this.world.scale.y;
+
+        this.world.scale.x *= zoomFactor;
+        this.world.scale.y *= zoomFactor;
+
+        this.world.x = centerX - localX * this.world.scale.x;
+        this.world.y = centerY - localY * this.world.scale.y;
+
+        // Keep infinite grid aligned
+        this.board.syncGridToCamera(this.world.x, this.world.y, this.world.scale.x);
+    }
 
     tryPermanentGripPoint(x: number, y: number){
         if(this.edit == editMode.NONE) {
-            let newPos : number[] = this.coords.snapToPoint(this.board, x, y);
+            let newPos : number[] = this.coords.snapToPoint(this.board, x, y);;
+            // if(this.coords.mode == SnapMode.GRID) newPos = this.coords.snapToPoint(this.board, x, y);
+            // else newPos = [x, y];
             if(this.drawMode == 'wall') {
-             console.log("try: " + this.wall.drawPosition[0] + " " + this.wall.drawPosition[1]);
-            // console.log("try: " + newPos[0] + " " + newPos[1]);
                 this.drawPermanentGripPoint(this.wall, this.wall.drawPosition[0], this.wall.drawPosition[1], "start");
                 this.drawPermanentGripPoint(this.wall, newPos[0], newPos[1], "end");
-                
             } else {
-                
                 this.room.walls.forEach(wall => {
-                    console.log("walls in room: " + wall.drawPosition[0] + " " + wall.drawPosition[1] + ", "+ wall.endPosition[0] + " " + this.wall.endPosition[1])
                     this.drawPermanentGripPoint(wall, wall.drawPosition[0], wall.drawPosition[1], "start");
                     this.drawPermanentGripPoint(wall, wall.endPosition[0], wall.endPosition[1], "end");
                 })
-                // this.drawPermanentGripPoint(this.room.drawPosition[0], this.room.drawPosition[1], "start");
-                // this.drawPermanentGripPoint(this.room.drawPosition[0], y, "end");
-                // this.drawPermanentGripPoint(newPos[0], this.room.drawPosition[1], "start");
-                // this.drawPermanentGripPoint(newPos[0], newPos[1], "end");
             }
         } else if(this.edit == editMode.ROOF) {
-            let newPos : number[] = this.coords.snapToPoint(this.board, x, y);
-            // console.log("try: " + this.wall.drawPosition[0] + " " + this.wall.drawPosition[1]);
-            // console.log("try: " + newPos[0] + " " + newPos[1]);
-                this.drawPermanentGripPoint(this.roof, this.roof.drawPosition[0], this.roof.drawPosition[1], "start");
-                this.drawPermanentGripPoint(this.roof, newPos[0], newPos[1], "end");
+            let newPos : number[] = this.coords.snapToPoint(this.board, x, y);;
+            // if(this.coords.mode == SnapMode.GRID) newPos = this.coords.snapToPoint(this.board, x, y);
+            // else newPos = [x, y];
+            this.drawPermanentGripPoint(this.roof, this.roof.drawPosition[0], this.roof.drawPosition[1], "start");
+            this.drawPermanentGripPoint(this.roof, newPos[0], newPos[1], "end");
         }
-        
     }
-
 
     drawPermanentGripPoint(wall: Wall, x: number, y: number, position: string) {
         if(this.edit == editMode.NONE) {
             let gp = new GripPoint([{wall: wall, position: position}], this.board, this.model);
-            
             let pos = gp.checkCoords(x, y);
-            console.log(pos);
             let exists = this.model.checkLinkage(pos) && this.wall.gripPoints.length > 0;
-            console.log(exists);
             if(!exists) {
                 this.gripPoints.push(gp);
-                // gp.drawPermanent(x, y);
                 wall.drawPermanentGripPoint(gp, x, y);
                 for(var wall1 of this.walls) {
                     if(wall1.startPosition[0] == x && wall1.startPosition[1] == y) {
-                        gp.walls.push({
-                            wall: wall1,
-                            position: "start"
-                        });
+                        gp.walls.push({ wall: wall1, position: "start" });
                     } else if (wall1.endPosition[0] == x && wall1.endPosition[1] == y) {
-                        gp.walls.push({
-                            wall: wall1,
-                            position: "end"
-                        });
+                        gp.walls.push({ wall: wall1, position: "end" });
                     }
                 }
-             //   console.log("doesn't exist: " + x + " " + y)
             } else {
-              //  console.log("exists: " + x + " " + y)
                 for(var gripPoint of this.gripPoints) {
                     if(gripPoint.center.x == x && gripPoint.center.y == y) {
-                        gripPoint.walls.push({
-                            wall: wall,
-                            position: position
-                        });
+                        gripPoint.walls.push({ wall: wall, position: position });
                     }
                 }
-                
            }
         } else if(this.edit == editMode.ROOF) {
             let gp = new GripPoint([{wall: wall, position: position}], this.board, this.model);
             let pos = gp.checkCoords(x, y);
             let exists = this.model.checkLinkage(pos);
-            //console.log(exists);
             if(!exists) {
                 this.gripPoints.push(gp);
-                // gp.drawPermanent(x, y);
                 wall.drawPermanentGripPoint(gp, x, y);
-             //   console.log("doesn't exist: " + x + " " + y)
             } else {
-              //  console.log("exists: " + x + " " + y)
                 for(var gripPoint of this.gripPoints) {
                     if(gripPoint.center.x == x && gripPoint.center.y == y) {
-                        gripPoint.walls.push({
-                            wall: wall,
-                            position: position
-                        });
+                        gripPoint.walls.push({ wall: wall, position: position });
                     }
                 }
-                
             }
         }
-        
     }
 
     updateRooms() {
@@ -319,61 +353,63 @@ export class Viewer2D extends PIXI.Application {
             this.model.walls.forEach(wall1=> {
                 this.walls.forEach(wall2=> {
                     if(wall1.wall.wallID == wall2.wallID) {
-                        
                         if(wall1.wall.roomID.length > 0) {
                             wall2.partOfRoomID = wall1.wall.roomID;
                         }
                     }
-                    //console.log(wall1.wall.roomID + " - - - " + wall2.partOfRoomID)
                 })
-            })
+            });
             
-            this.model.rooms.forEach(room => {
-                let walls = this.model.getWallsFromRoom(room.room.roomID);
-                //console.log("walls in room: " + room.room.roomID)
-                let r = new Room(room.room.roomID);
+            // ---> FIX: WIPE ALL OLD GHOST LAYERS BEFORE REDRAWING <---
+            this.roomsLayer.removeChildren();
+            this.rooms = [];
+
+            this.model.rooms.forEach(roomData => {
+                let r = new Room();
+                r.setup(this.model, this.board, this.spriteManager, this.coords.mode); 
+                
+                r.roomID = roomData.room.roomID;
+
                 this.roomsLayer.addChild(r);
+                this.rooms.push(r); // Track it
+                this.objectsLayer.addChild(r.getObjects());
+                
+                if(roomData.room.roomType) r.setRoomType(roomData.room.roomType);
+                r.createRoom(this.model.roomToCoords(roomData.room.roomID));
+
+                let walls = this.model.getWallsFromRoom(roomData.room.roomID);
                 walls.forEach(w1 => {
                    this.walls.forEach(w2 => {
                         if(w1.wall.wallID == w2.wallID) {
-                            w2.room = r;
+                            // Populate our new array!
+                            if (!w2.connectedRooms) w2.connectedRooms = [];
+                            if (!w2.connectedRooms.includes(r)) w2.connectedRooms.push(r);
+                            
+                            w2.room = r; 
                         }
                    })
                 })
-            })
+            });
         } else if(this.edit == editMode.ROOF) {
             this.model.roof.forEach(wall1=> {
                 this.roofs.forEach(wall2=> {
                     if(wall1.wall.wallID == wall2.wallID) {
-                        
                         if(wall1.wall.roomID.length > 0) {
                             wall2.partOfRoomID = wall1.wall.roomID;
                         }
                     }
-                    //console.log(wall1.wall.roomID + " - - - " + wall2.partOfRoomID)
                 })
             })
         }
-         
     }
 
     async clearBoard() {
         this.model.clearModel();
-        await this.wallsLayer.children.forEach(async wall =>{
-            await this.wallsLayer.removeChild(wall);
-        });
-        await this.roofLayer.children.forEach(async wall =>{
-            await this.roofLayer.removeChild(wall);
-        });
-        await this.roomsLayer.children.forEach(async wall =>{
-            await this.roomsLayer.removeChild(wall);
-        });
-        await this.gripPointsLayer.children.forEach(async wall =>{
-            await this.gripPointsLayer.removeChild(wall);
-        });
-        await this.objectsLayer.children.forEach(async wall =>{
-            await this.objectsLayer.removeChild(wall);
-        });
+        await this.wallsLayer.children.forEach(async wall =>{ await this.wallsLayer.removeChild(wall); });
+        await this.roofLayer.children.forEach(async wall =>{ await this.roofLayer.removeChild(wall); });
+        await this.roomsLayer.children.forEach(async wall =>{ await this.roomsLayer.removeChild(wall); });
+        await this.gripPointsLayer.children.forEach(async wall =>{ await this.gripPointsLayer.removeChild(wall); });
+        await this.objectsLayer.children.forEach(async wall =>{ await this.objectsLayer.removeChild(wall); });
         this.walls = [];
         this.roofs = [];
         this.rooms =[];
@@ -383,94 +419,206 @@ export class Viewer2D extends PIXI.Application {
         this.room = new Room();
     }
 
-    buildModel(plan: Plan) {
-        //this.model.importPlan(plan);
-        console.log("model: ");
-        console.log(this.model);
 
-        plan.walls.forEach(wall => {
+    buildModel(plan: Plan) {
+        this.model.importPlan(plan);
+
+        // 1. RECONSTRUCT WALLS
+        this.model.walls.forEach(wallData => {
             this.wall = new Wall();
             this.wall.setup(this.model, this.board, this.spriteManager);
             
-            this.walls.push(this.wall);
-            this.wall.moveToPoint(wall.wall.startPoint.coordX, wall.wall.startPoint.coordY);
-            
-            this.wall.drawPermanent(wall.wall.endPoint.coordX, wall.wall.endPoint.coordY);
-            this.tryPermanentGripPoint(wall.wall.endPoint.coordX, wall.wall.endPoint.coordY);
-            this.wall.addChild(this.wall.getObjects());
-            this.wallsLayer.addChild(this.wall);
-            //console.log(this.wall.getGripPoints()); 
-           // this.wallsLayer.addChild(this.wall.getGripPoints());
-            this.objectsLayer.addChild(this.wall.getObjects());
-            this.gripPointsLayer.addChild(this.wall.getGripPoints());
+            this.wall.wallID = wallData.wall.wallID;
+            this.wall.startPosition = [wallData.wall.startPoint.coordX, wallData.wall.startPoint.coordY];
+            this.wall.endPosition = [wallData.wall.endPoint.coordX, wallData.wall.endPoint.coordY];
+            this.wall.drawPosition = this.wall.startPosition;
+            this.wall.partOfRoomID = wallData.wall.roomID;
 
-            //
-           // this.wall.tryRoom(wall.wall.endPoint.coordX, wall.wall.endPoint.coordY);
-          //  this.wall.room
-        })
-        console.log(plan);
-        plan.rooms.forEach(room => {
-            this.room = new Room();
-            this.roomsLayer.addChild(this.room);
-            let walls = room.room.wallsID.map(wallID => {
-                let wall = this.model.findWallByID(wallID);
-                if(wall) return {
-                    startPoint: {
-                        coordX: wall.wall.startPoint.coordX,
-                        coordY: wall.wall.startPoint.coordY,
-                    },
-                    endPoint: {
-                        coordX: wall.wall.endPoint.coordX,
-                        coordY: wall.wall.endPoint.coordY,
-                    }
-                } 
-                else return {
-                    startPoint: {
-                        coordX: 0,
-                        coordY: 0,
-                    },
-                    endPoint: {
-                        coordX: 0,
-                        coordY: 0,
-                    }
+            this.wall.clear();
+            this.wall.moveToPoint(this.wall.startPosition[0], this.wall.startPosition[1]);
+            this.wall.lineTo(this.wall.endPosition[0], this.wall.endPosition[1]);
+            this.wall.stroke({ width: this.wall.lineWidth, color: this.wall.lineColor });
+
+            this.walls.push(this.wall);
+            this.wallsLayer.addChild(this.wall);
+            this.objectsLayer.addChild(this.wall.getObjects());
+        });
+
+        // 2. GRIP POINTS
+        const wallGripMap = new Map<string, GripPoint>();
+        this.walls.forEach(w => {
+            const startKey = `${w.startPosition[0]},${w.startPosition[1]}`;
+            const endKey = `${w.endPosition[0]},${w.endPosition[1]}`;
+
+            if (!wallGripMap.has(startKey)) {
+                let gp = new GripPoint([{ wall: w, position: "start" }], this.board, this.model);
+                gp.drawPermanent(w.startPosition[0], w.startPosition[1]);
+                wallGripMap.set(startKey, gp);
+                this.gripPoints.push(gp);
+                this.gripPointsLayer.addChild(gp);
+                w.gripPoints.push(gp);
+            } else {
+                let gp = wallGripMap.get(startKey)!;
+                gp.walls.push({ wall: w, position: "start" });
+                w.gripPoints.push(gp);
+            }
+
+            if (!wallGripMap.has(endKey)) {
+                let gp = new GripPoint([{ wall: w, position: "end" }], this.board, this.model);
+                gp.drawPermanent(w.endPosition[0], w.endPosition[1]);
+                wallGripMap.set(endKey, gp);
+                this.gripPoints.push(gp);
+                this.gripPointsLayer.addChild(gp);
+                w.gripPoints.push(gp);
+            } else {
+                let gp = wallGripMap.get(endKey)!;
+                gp.walls.push({ wall: w, position: "end" });
+                w.gripPoints.push(gp);
+            }
+        });
+
+        // 3. RECONSTRUCT DOORS
+        this.model.objects.doors.forEach(doorData => {
+            const targetWall = this.walls.find(w => w.wallID === doorData.door.partOfWall);
+            if (targetWall) {
+                let newDoor = new Door(targetWall, this.model, this.spriteManager);
+                newDoor.setup();
+                newDoor.doorID = doorData.door.doorID; 
+                
+                newDoor.alpha = 1;
+                newDoor.rotation = newDoor.checkAngle(targetWall);
+                newDoor.x = doorData.door.centerPoint.coordX;
+                newDoor.y = doorData.door.centerPoint.coordY - targetWall.lineWidth / 2;
+                
+                targetWall.objectsContainer.addChild(newDoor);
+                this.objectsLayer.addChild(targetWall.getObjects());
+            }
+        });
+
+        // 4. RECONSTRUCT WINDOWS
+        this.model.objects.windows.forEach(windowData => {
+            const targetWall = this.walls.find(w => w.wallID === windowData.window.partOfWall);
+            if (targetWall) {
+                let newWindow = new Window(targetWall, this.model, this.spriteManager);
+                newWindow.setup();
+                
+                newWindow.alpha = 1;
+                newWindow.rotation = newWindow.checkAngle(targetWall); 
+                newWindow.x = windowData.window.centerPoint.coordX;
+                newWindow.y = windowData.window.centerPoint.coordY; 
+                
+                targetWall.objects.push(newWindow); 
+                targetWall.objectsContainer.addChild(newWindow);
+                this.objectsLayer.addChild(targetWall.getObjects());
+            }
+        });
+
+        this.updateRooms();
+
+        // 5. RECONSTRUCT FURNITURE
+        if (plan.objects && plan.objects.furniture) {
+            plan.objects.furniture.forEach(furnitureData => {
+                console.log(`Attempting to draw furniture piece (Type ID: ${furnitureData.piece.typeID}) at X: ${furnitureData.piece.centerPoint.coordX}, Y: ${furnitureData.piece.centerPoint.coordY}`);
+
+                const targetRoom = this.rooms.find(r => r.roomID === furnitureData.piece.partOfRoom);
+                
+                if (targetRoom) {
+                    let newPiece = new Furniture(targetRoom, this.model, this.spriteManager, furnitureData.piece.typeID);
+                    newPiece.setup();
+                    
+                    newPiece.pieceID = furnitureData.piece.pieceID; 
+                    newPiece.alpha = 1;
+                    
+                    newPiece.rotation = furnitureData.piece.rotation || 0;
+                    newPiece.x = furnitureData.piece.centerPoint.coordX;
+                    newPiece.y = furnitureData.piece.centerPoint.coordY;
+                    
+                    targetRoom.objects.push(newPiece);
+                    targetRoom.objectsContainer.addChild(newPiece);
+                    
+                    newPiece.drawPermanent(furnitureData.piece.centerPoint.coordX, furnitureData.piece.centerPoint.coordY);
+                    
+                    this.objectsLayer.addChild(targetRoom.getObjects());
+
+                    console.log("✅ Successfully rendered furniture ID: " + furnitureData.piece.typeID);
+                } else {
+                    console.warn("⚠️ Could not find target room ID: " + furnitureData.piece.partOfRoom);
                 }
             });
-            console.log("walls: " + walls.forEach(wall=> console.log(wall)));
-            //this.room.
-            this.room.createRoom(walls);
-            this.updateRooms();
-        })
-        plan.roof.forEach(roof => {
+        } else {
+            console.log("No furniture found in this plan.");
+        }
+
+        // 6. RECONSTRUCT ROOF
+        const roofGripMap = new Map<string, GripPoint>();
+        this.model.roof.forEach(roofData => {
             this.roof = new Roof();
             this.roof.setup(this.model, this.board, this.spriteManager);
             
+            this.roof.startPosition = [roofData.wall.startPoint.coordX, roofData.wall.startPoint.coordY];
+            this.roof.endPosition = [roofData.wall.endPoint.coordX, roofData.wall.endPoint.coordY];
             
-            this.roof.moveToPoint( roof.wall.startPoint.coordX, roof.wall.startPoint.coordY);
-            this.roof.drawPermanent(roof.wall.endPoint.coordX, roof.wall.endPoint.coordY);
-            this.tryPermanentGripPoint(roof.wall.endPoint.coordX, roof.wall.endPoint.coordY);
-            this.gripPointsLayer.addChild(this.roof.getGripPoints());
-            this.roof.addChild(this.roof.getObjects());
-            this.roofLayer.addChild(this.roof);
-            this.roofs.push(this.roof);
+            this.roof.clear();
+            this.roof.moveToPoint(this.roof.startPosition[0], this.roof.startPosition[1]);
+            this.roof.lineTo(this.roof.endPosition[0], this.roof.endPosition[1]);
+            this.roof.stroke({ width: 8, color: "0x530000" }); 
 
+            this.roofs.push(this.roof);
+            this.roofLayer.addChild(this.roof);
+            this.roof.addChild(this.roof.getObjects());
+
+            const startKey = `${this.roof.startPosition[0]},${this.roof.startPosition[1]}`;
+            const endKey = `${this.roof.endPosition[0]},${this.roof.endPosition[1]}`;
+
+            if (!roofGripMap.has(startKey)) {
+                let gp = new GripPoint([{ wall: this.roof, position: "start" }], this.board, this.model);
+                gp.drawPermanent(this.roof.startPosition[0], this.roof.startPosition[1]);
+                roofGripMap.set(startKey, gp);
+                this.gripPoints.push(gp);
+                this.gripPointsLayer.addChild(gp);
+                this.roof.gripPoints.push(gp);
+            } else {
+                let gp = roofGripMap.get(startKey)!;
+                gp.walls.push({ wall: this.roof, position: "start" });
+                this.roof.gripPoints.push(gp);
+            }
+
+            if (!roofGripMap.has(endKey)) {
+                let gp = new GripPoint([{ wall: this.roof, position: "end" }], this.board, this.model);
+                gp.drawPermanent(this.roof.endPosition[0], this.roof.endPosition[1]);
+                roofGripMap.set(endKey, gp);
+                this.gripPoints.push(gp);
+                this.gripPointsLayer.addChild(gp);
+                this.roof.gripPoints.push(gp);
+            } else {
+                let gp = roofGripMap.get(endKey)!;
+                gp.walls.push({ wall: this.roof, position: "end" });
+                this.roof.gripPoints.push(gp);
+            }
+        });
+    }
+
+    setSnapMode(mode: SnapMode) {
+        this.rooms.forEach(room => {
+            room.coords.changeSnapMode(mode);
         })
     }
 
-    
-    //update(delta: PIXI.Ticker) {
-       
-      
-   // }
     setDrawMode(mode: string) {
         this.drawMode = mode;
     }
     setEditMode(mode: editMode) {
         this.edit = mode;
         if(this.edit == editMode.GRIPPOINT) {
-            
             this.walls.forEach(wall => {
                 wall.setEditMode(mode);
                 wall.gripPoints.forEach(gp => {
+                    gp.setup(this.stage, true);
+                })
+            })
+            this.roofs.forEach(roof => {
+                roof.setEditMode(mode);
+                roof.gripPoints.forEach(gp => {
                     gp.setup(this.stage, true);
                 })
             })
@@ -481,8 +629,22 @@ export class Viewer2D extends PIXI.Application {
                     gp.setup(this.stage, false);
                 })
             })
+            this.roofs.forEach(roof => {
+                roof.setEditMode(mode);
+                roof.gripPoints.forEach(gp => {
+                    gp.setup(this.stage, false);
+                })
+            })
+            this.rooms.forEach(room => {
+                room.setEditMode(mode);
+            }
+
+            )
         }
-        
+    }
+
+    async createFurnitureTexture(furnitureAsset: FurnitureItem){
+        this.spriteManager.createFurnitureTexture(furnitureAsset);
     }
 
     getModel() : Model{

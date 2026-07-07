@@ -24,7 +24,8 @@ export class Wall extends PIXI.Graphics {
     lineColor: string;
     gripPoints: GripPoint[] = [];
     partOfRoomID: number[] = [];
-    room : Room | undefined = undefined;
+    public connectedRooms: Room[] = []; // <--- ADD THIS LINE
+    room : Room | undefined = undefined; // (Keep your old one)
     objects: Object[] = [];
     objectsContainer: PIXI.Container = new PIXI.Container;
     spriteManager: SpriteManager = new SpriteManager();
@@ -163,40 +164,53 @@ export class Wall extends PIXI.Graphics {
         //return true;
     }
 
-    redraw(x: number, y: number, position: string) {
+   redraw(x: number, y: number, position: string) {
         this.clear();
-        if(position == "start") {
-            let distances: { coordX: number; coordY: number }[] = [];
-            for(let i = 0; i < this.objects.length; i++){
-                distances.push({
-                    coordX: Math.abs(this.calculatePointOnLine(this.endPosition[0], this.endPosition[1], this.startPosition[0], this.startPosition[1]).coordX - this.objects[i].x),
-                    coordY: Math.abs(this.calculatePointOnLine(this.endPosition[0], this.endPosition[1], this.startPosition[0], this.startPosition[1]).coordY - this.objects[i].y)
-                });
-            };
+        
+        if (position == "start") {
             this.moveToPoint(this.endPosition[0], this.endPosition[1]);
             this.lineTo(x, y);
             this.startPosition = [x, y];
-            this.stroke({ width: this.lineWidth, color: this.lineColor });
-            for(let i = 0; i < this.objects.length; i++){
-                console.log("Unghi: " + (180 - this.checkAngle() * (180 / Math.PI)) + " --- i: " + i);
-                //if(distances[i].coordY == 0) distances[i].coordY = this.lineWidth;
-                //else distances[i].coordY -= this.lineWidth
-                this.objects[i].x =  this.calculatePointOnLine(this.endPosition[0], this.endPosition[1], this.startPosition[0], this.startPosition[1]).coordX //> this.objects[i].x? this.calculatePointOnLine(this.endPosition[0], this.endPosition[1], this.startPosition[0], this.startPosition[1]).coordX- distances[i].coordX+this.lineWidth : this.calculatePointOnLine(this.endPosition[0], this.endPosition[1], this.startPosition[0], this.startPosition[1]).coordX+ distances[i].coordX-this.lineWidth;
-                this.objects[i].y =  this.calculatePointOnLine(this.endPosition[0], this.endPosition[1], this.startPosition[0], this.startPosition[1]).coordY //> this.objects[i].y? this.calculatePointOnLine(this.endPosition[0], this.endPosition[1], this.startPosition[0], this.startPosition[1]).coordY- distances[i].coordY+this.lineWidth : this.calculatePointOnLine(this.endPosition[0], this.endPosition[1], this.startPosition[0], this.startPosition[1]).coordY+ distances[i].coordY-this.lineWidth;
-                this.objects[i].rotation = this.checkAngle();
-                this.objects[i].update();
-            
-            };
         } else {
             this.moveToPoint(this.startPosition[0], this.startPosition[1]);
             this.lineTo(x, y);
             this.endPosition = [x, y];
-            this.stroke({ width: this.lineWidth, color: this.lineColor });
-            
         }
+        
+        this.stroke({ width: this.lineWidth, color: this.lineColor });
+
+        // Update doors and windows so they move with the wall
+        for(let i = 0; i < this.objects.length; i++){
+            let midPoint = this.calculatePointOnLine(
+                this.endPosition[0], this.endPosition[1], 
+                this.startPosition[0], this.startPosition[1]
+            );
+            this.objects[i].x = midPoint.coordX;
+            this.objects[i].y = midPoint.coordY;
+            this.objects[i].rotation = this.checkAngle();
+            this.objects[i].update();
+        }
+
         this.updateCoords(this.startPosition[0], this.startPosition[1], this.endPosition[0], this.endPosition[1]);
-        console.log("ID: " + this.partOfRoomID);
-        if(this.partOfRoomID.length > 0 && this.room) this.partOfRoomID.forEach(p=>this.room?.createRoom(this.model.roomToCoords(p)));
+        
+        // RE-DRAW FLOORS (FIXED TO CLEAR ALL ATTACHED GHOSTS)
+        if (this.partOfRoomID.length > 0) {
+            if (this.connectedRooms && this.connectedRooms.length > 0) {
+                // 1. Wipe every floor touching this wall
+                this.connectedRooms.forEach(r => r.clear());
+                
+                // 2. Redraw the new shapes onto the graphics objects
+                this.partOfRoomID.forEach((roomID, idx) => {
+                    let targetGraphic = this.connectedRooms[idx] || this.connectedRooms[0];
+                    if (targetGraphic) {
+                        targetGraphic.createRoom(this.model.roomToCoords(roomID));
+                    }
+                });
+            } else if (this.room) { // Fallback just in case
+                this.room.clear(); 
+                this.partOfRoomID.forEach(p => this.room?.createRoom(this.model.roomToCoords(p)));
+            }
+        }
     }
 
     tryRoom(x: number, y: number){

@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { Coordinates } from "./Coordinates";
+import { Coordinates, SnapMode } from "./Coordinates";
 import { Board } from "./Board";
 import { Model } from "../model/Model";
 import { Wall } from "./Wall";
@@ -22,7 +22,7 @@ export class GripPoint extends PIXI.Graphics {
         wall: Wall,
         position: string
     }[] = [];
-    constructor(walls: {wall: Wall, position: string}[], board: Board, model: Model, lineSize?: number, lineColor?: string) {
+    constructor(walls: {wall: Wall, position: string}[], board: Board, model: Model, lineSize?: number, lineColor?: string, snapMode?:SnapMode) {
         super();
         this.walls = walls;
         this.board = board;
@@ -34,6 +34,7 @@ export class GripPoint extends PIXI.Graphics {
         this.fillStandard = "0xC8BCAC";
         this.lineTempColor = "0xFF0000";
         this.lineColor = lineColor || "0x530000";
+        if(snapMode) this.center.changeSnapMode(snapMode);
     }
     setup(stage: PIXI.Container, editMode: boolean){
         this.editMode = editMode;

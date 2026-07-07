@@ -1,6 +1,5 @@
 import { Plan } from "./Parser";
 
-
 export class Model {
     wallIndex: number = 0;
     roofIndex: number = 0;
@@ -11,7 +10,8 @@ export class Model {
     public rooms: {
         room: {
             roomID: number,
-            wallsID: number[]
+            wallsID: number[],
+            roomType?: string
         }
     }[] = [];
     public walls: { 
@@ -87,7 +87,18 @@ export class Model {
                 partOfWall: number
             }
         }[],
-        furniture: {}[]
+        furniture: {
+            piece: {
+                pieceID: number,
+                typeID: number,
+                rotation: number,
+                centerPoint: {
+                    coordX: number,
+                    coordY: number
+                },
+                partOfRoom: number
+            }
+        }[]
     } = {
         windows: [],
         doors: [],
@@ -167,7 +178,7 @@ export class Model {
             }[]
         },
         roomID: number[]
-}[] = [];
+    }[] = [];
     
     addToWalls(startPointX: number, startPointY: number, endPointX: number, endPointY: number, wallHeight: number): {
         wall: {
@@ -194,6 +205,18 @@ export class Model {
             roomID : number[]
         }
     } {
+        // CHANGED: Prevent Duplicates (shared boundaries are reused instead of stacking)
+        let existingWall = this.walls.find(w => 
+            (w.wall.startPoint.coordX === startPointX && w.wall.startPoint.coordY === startPointY && 
+             w.wall.endPoint.coordX === endPointX && w.wall.endPoint.coordY === endPointY) ||
+            (w.wall.startPoint.coordX === endPointX && w.wall.startPoint.coordY === endPointY && 
+             w.wall.endPoint.coordX === startPointX && w.wall.endPoint.coordY === startPointY)
+        );
+
+        if (existingWall) {
+            return existingWall;
+        }
+
         let newWall = {
             wall: {
                 wallID: this.wallIndex,
@@ -271,7 +294,7 @@ export class Model {
         this.rooms.push({
             room: {
                 roomID: this.roomIndex,
-                wallsID: wallsID
+                wallsID: wallsID,
             }
         })
         return this.roomIndex++;
@@ -331,7 +354,7 @@ export class Model {
         }
     }
 
-    addToObjects(type: string, centerPointX: number, centerPointY: number, partOfWall?: number) {
+    addToObjects(type: string, centerPointX: number, centerPointY: number, partOfWall?: number, typeID?: number, rotation? : number) {
         if(type == 'window' && partOfWall != undefined) {
             this.objects.windows.push({
                 window: {
@@ -356,7 +379,19 @@ export class Model {
                 }
             })
             return this.doorIndex++;
-        } else if(type == 'furniture') {
+        } else if(type == 'furniture' && partOfWall != undefined && typeID != undefined && rotation != undefined) {
+            this.objects.furniture.push({
+                piece: {
+                    pieceID: this.furnitureIndex,
+                    typeID: typeID,
+                    rotation: rotation,
+                    centerPoint: {
+                        coordX: centerPointX,
+                        coordY: centerPointY
+                    },
+                    partOfRoom: partOfWall
+                }
+            })
             return this.furnitureIndex++;
         }
     }
@@ -365,6 +400,15 @@ export class Model {
         for (var window of this.objects.windows) {
             if(window.window.windowID == windowID){
                 return window;
+            }
+        }
+        return undefined;
+    }
+
+    findPieceByID(pieceID: number){ 
+        for (var piece of this.objects.furniture) {
+            if(piece.piece.pieceID == pieceID){
+                return piece;
             }
         }
         return undefined;
@@ -410,6 +454,25 @@ export class Model {
             oldDoor = door;
         }
     }
+
+    updateFurniture(pieceID: number, piece: {
+        piece: {
+            pieceID: number;
+            typeID: number;
+            rotation: number;
+            centerPoint: {
+                coordX: number;
+                coordY: number;
+            };
+            partOfRoom: number;
+        };
+    }) {
+        let oldPiece = this.findPieceByID(pieceID);
+        if(oldPiece) {
+            oldPiece = piece;
+        }
+    }
+
 
     getWallsFromRoom(roomID: number) {
         let walls: {
@@ -471,181 +534,42 @@ export class Model {
     updateWall(wallID: number, newWall: { 
         wall: {
             wallID: number,
-            startPoint: {
-                coordX: number,
-                coordY:number
-            }; 
-            endPoint: {
-                coordX: number, 
-                coordY:number
-            }; 
+            startPoint: { coordX: number, coordY:number }; 
+            endPoint: { coordX: number, coordY:number }; 
             wallHeight: number,
             linked: {
-                startPoint: {
-                    wallID: number,
-                    roomID: number
-                }[],
-                endPoint: {
-                    wallID: number,
-                    roomID: number
-                }[]
+                startPoint: { wallID: number, roomID: number }[],
+                endPoint: { wallID: number, roomID: number }[]
             },
             roomID: number[]
         }
     }) {
         let wall = this.findWallByID(wallID);
         if(wall) {
+            // CHANGED: Prevent destructively overwriting shared room IDs and links
+            let existingRooms = wall.wall.roomID || [];
+            let incomingRooms = newWall.wall.roomID || [];
+            
+            // Merge valid room IDs safely to avoid null/undefined
+            let mergedRooms = Array.from(new Set([...existingRooms, ...incomingRooms])).filter(id => id != null);
+            newWall.wall.roomID = mergedRooms;
+
+            const mergeLinks = (existingLinks: any[], incomingLinks: any[]) => {
+                let merged = [...existingLinks];
+                incomingLinks.forEach(nl => {
+                    if (nl && nl.wallID != null && !merged.find(el => el.wallID === nl.wallID && el.roomID === nl.roomID)) {
+                        merged.push(nl);
+                    }
+                });
+                return merged;
+            };
+
+            newWall.wall.linked.startPoint = mergeLinks(wall.wall.linked.startPoint, newWall.wall.linked.startPoint);
+            newWall.wall.linked.endPoint = mergeLinks(wall.wall.linked.endPoint, newWall.wall.linked.endPoint);
+
             this.walls[this.walls.indexOf(wall)] = newWall;
         }
-        
-        // this.rooms.forEach(room => {
-        //     new Wall().createRoom(this.roomToCoords(room));
-        // })
     }
-
-    // updateWallStartPoint(wallID: number, startPointX: number, startPointY: number) {
-    //     let wall = this.findWallByID(wallID);
-    //     if(wall) {
-    //         this.updateWall(wallID, {
-    //             wall: {
-    //                 wallID: wallID,
-    //                 startPoint:{
-    //                     coordX: startPointX,
-    //                     coordY: startPointY
-    //                 },
-    //                 endPoint: {
-    //                     coordX: wall.wall.endPoint.coordX,
-    //                     coordY: wall.wall.endPoint.coordY
-    //                 },
-    //                 wallHeight: wall.wall.wallHeight,
-    //                 linked: {
-    //                     startPoint: wall.wall.linked.startPoint,
-    //                     endPoint: wall.wall.linked.endPoint
-    //                 },
-    //                 roomID: wall.wall.roomID
-    //             }
-    //         })
-    //     }
-    // }
-
-    // updateWallEndPoint(wallID: number, endPointX: number, endPointY: number) {
-    //     let wall = this.findWallByID(wallID);
-    //     if(wall) {
-    //         this.updateWall(wallID, {
-    //             wall: {
-    //                 wallID: wallID,
-    //                 startPoint:{
-    //                     coordX: wall.wall.startPoint.coordX,
-    //                     coordY: wall.wall.endPoint.coordY
-    //                 },
-    //                 endPoint: {
-    //                     coordX: endPointX,
-    //                     coordY: endPointY
-    //                 },
-    //                 wallHeight: wall.wall.wallHeight,
-    //                 linked: {
-    //                     startPoint: wall.wall.linked.startPoint,
-    //                     endPoint: wall.wall.linked.endPoint
-    //                 },
-    //                 roomID: wall.wall.roomID
-    //             }
-    //         })
-    //     }
-        
-    // }
-
-
-    // dfs_cycle(point1: number, point2: number)
-    // {
-    //     // already (completely)
-    //     // visited vertex.
-    //     // console.log("-----------------");
-    //     // console.log("point: " + point1);
-    //     // console.log("parent: " + point2);
-    //     // console.log("point rels: " + this.plan[point1]);
-    //     // console.log("parent rels: " + this.plan[point2]);
-    //     // console.log("type: " + this.type[point1]);
-    //     // console.log("parent: " + this.parent[point1]);
-    //     if (this.type[point1] == 2)
-    //     {
-    //         return;
-    //     }
-        
-    //     // seen vertex, but was not 
-    //     // completely visited -> cycle 
-    //     // detected. backtrack based on 
-    //     // parents to find the complete
-    //     // cycle.
-
-
-    //     if (this.type[point1] == 1)
-    //     {
-    //         let polygon : number[] = [];
-    //         let currentPoint = point2;
-    //         polygon.push(currentPoint);
-        
-    //         // backtrack the vertex which 
-    //         // are in the current cycle 
-    //         // thats found
-    //         while (currentPoint != point1)
-    //         {
-    //             let parent = this.parent[currentPoint];
-    //            // console.log("parent----------: " + this.parent[currentPoint]);
-    //             if(parent == 0) {
-    //                 polygon.push(0);
-    //                 currentPoint = point1; 
-    //                 polygon.push(point1);      
-    //             } else {
-    //                 if(parent) currentPoint = parent;
-                
-    //                 polygon.push(currentPoint);
-    //             }
-                
-    //         }
-    //         this.polygons[this.polygonNumber] =  polygon;
-    //         this.polygonNumber++;
-    //         return;
-    //     }
-    //     this.parent[point1] = point2;
-    //    // console.log("parent after: " + this.parent[point1]);
-    //     // partially visited.
-    //     this.type[point1] =  1;
-    //   //  console.log("type after: " + this.type[point1]);
-    //     // simple dfs on graph
-    //     this.plan[point1].forEach(point => {
-    //         // if it has not been 
-    //         // visited previously
-    //         if (point != this.parent[point1]) {
-    //             this.dfs_cycle(point, point1);
-    //         }
-            
-    //     })
-        
-    //     // completely visited.
-    //     this.type[point1] = 2;
-    // }
- 
-    // getPolygons()
-    // {
-    //     // print all the vertex with 
-    //     // same cycle
-    //     for (var i = 0; i < this.polygonNumber; i++)
-    //     {
-    //         // Print the i-th cycle
-    //         //console.log("Cycle Number " + (i+1) + ":");
-    //         let point= this.polygons[i];
-    //         let wallsID: number[] = [];
-    //         if(point) {
-    //             for(var x of point){
-    //                // console.log(" " + x);
-    //                // this.type[x] = 2;
-    //                let wallID = this.pointsInfo[x].wallID;
-    //                wallsID.push(wallID);
-    //             }
-    //         }
-    //         this.addToRooms(this.polygons[i]);
-    //     }
-    // }
 
     checkLinkage(coords: number[]){
         for (var wall of this.walls) {
@@ -705,32 +629,17 @@ export class Model {
     wallsToCoords(wallsToConvert : {
         wall: {
             wallID: number,
-            startPoint: {
-                coordX: number,
-                coordY:number
-            }; 
-            endPoint: {
-                coordX: number, 
-                coordY:number
-            }; 
+            startPoint: { coordX: number, coordY:number }; 
+            endPoint: { coordX: number, coordY:number }; 
             wallHeight: number,
-            linked: {
-                startPoint: number,
-                endPoint: number
-            }
+            linked: { startPoint: number, endPoint: number }
         }
     }[]) {
         let walls: {startPoint: {coordX: number, coordY:number}; endPoint: {coordX: number, coordY:number};}[] = [];
         wallsToConvert.map(function(wall){
             walls.push({
-                startPoint:{
-                    coordX: wall.wall.startPoint.coordX, 
-                    coordY: wall.wall.startPoint.coordY
-                },
-                endPoint: {
-                    coordX: wall.wall.endPoint.coordX, 
-                    coordY: wall.wall.endPoint.coordY
-                }
+                startPoint:{ coordX: wall.wall.startPoint.coordX, coordY: wall.wall.startPoint.coordY },
+                endPoint: { coordX: wall.wall.endPoint.coordX, coordY: wall.wall.endPoint.coordY }
             });
         });
         return walls;
@@ -739,19 +648,45 @@ export class Model {
     roomToCoords(roomID: number) {
         let walls: {startPoint: {coordX: number, coordY:number}; endPoint: {coordX: number, coordY:number};}[] = [];
         let roomWalls = this.getWallsFromRoom(roomID);
-        for(var wall of roomWalls) {
-            if(wall) {
-                //console.log(wall.wall.wallID);
-                walls.push({
-                    startPoint:{
-                        coordX: wall.wall.startPoint.coordX, 
-                        coordY: wall.wall.startPoint.coordY
-                    },
-                    endPoint: {
-                        coordX: wall.wall.endPoint.coordX, 
-                        coordY: wall.wall.endPoint.coordY
-                    }
-                })
+        
+        let rawSegments = roomWalls.map(wall => {
+            if(wall && wall.wall) return {
+                startPoint: { coordX: wall.wall.startPoint.coordX, coordY: wall.wall.startPoint.coordY },
+                endPoint: { coordX: wall.wall.endPoint.coordX, coordY: wall.wall.endPoint.coordY }
+            };
+            return null;
+        }).filter(w => w !== null) as {startPoint: any, endPoint: any}[];
+
+        // CHANGED: Array boundary/undefined crash protection
+        if (rawSegments.length === 0) return walls;
+
+        let current = rawSegments.shift()!;
+        if (!current) return walls;
+        walls.push(current);
+
+        while (rawSegments.length > 0) {
+            let targetPoint = current.endPoint;
+            
+            let nextIndex = rawSegments.findIndex(s => 
+                (s.startPoint.coordX === targetPoint.coordX && s.startPoint.coordY === targetPoint.coordY) ||
+                (s.endPoint.coordX === targetPoint.coordX && s.endPoint.coordY === targetPoint.coordY)
+            );
+
+            if (nextIndex !== -1) {
+                let nextWall = rawSegments.splice(nextIndex, 1)[0];
+                if (nextWall.endPoint.coordX === targetPoint.coordX && nextWall.endPoint.coordY === targetPoint.coordY) {
+                    let temp = nextWall.startPoint;
+                    nextWall.startPoint = nextWall.endPoint;
+                    nextWall.endPoint = temp;
+                }
+                walls.push(nextWall);
+                current = nextWall;
+            } else {
+                let nextWall = rawSegments.shift();
+                if (nextWall) {
+                    walls.push(nextWall);
+                    current = nextWall;
+                }
             }
         }
         return walls;
@@ -760,24 +695,12 @@ export class Model {
     createRoom(polygonWalls : {
         wall: {
             wallID: number,
-            startPoint: {
-                coordX: number,
-                coordY:number
-            }; 
-            endPoint: {
-                coordX: number, 
-                coordY:number
-            }; 
+            startPoint: { coordX: number, coordY:number }; 
+            endPoint: { coordX: number, coordY:number }; 
             wallHeight: number,
             linked: {
-                startPoint: {
-                    wallID: number,
-                    roomID: number
-                }[],
-                endPoint: {
-                    wallID: number,
-                    roomID: number
-                }[]
+                startPoint: { wallID: number, roomID: number }[],
+                endPoint: { wallID: number, roomID: number }[]
             },
             roomID: number[]
         }
@@ -798,8 +721,6 @@ export class Model {
                     if(w1.wall.roomID.indexOf(id) == -1) {
                         w1.wall.roomID.push(id);
                     }
-                    
-                  //  console.log(w1.wall.roomID);
                 }
             })
         });
@@ -823,53 +744,10 @@ export class Model {
             }
     }
 
-    // getRooms() {
-    //     // let p1 = this.getCoordsFromWall(1);
-        
-    //     // if(p1) console.log("p1: " + p1.startPoint.coordX + " " + p1.startPoint.coordY)
-    //     // if(p1) console.log("p1: " + p1.endPoint.coordX + " " + p1.endPoint.coordY)
-    //     // let p2 = this.getCoordsFromWall(0);
-    //     // if(p2) console.log("p2: " + p2.startPoint.coordX + " " + p2.startPoint.coordY)
-    //     // if(p2) console.log("p2: " + p2.endPoint.coordX + " " + p2.endPoint.coordY)
-    //     this.dfs_cycle(1, 0);
-    //     console.log("Polygons: " + this.polygons);
-    //    for(let i = 0; i < this.plan.length; i++) {
-    //     for(let j=0;j < this.plan[i].length; j++) {
-    //         console.log(i + ": " + this.plan[i][j])
-    //     }
-    //    }
-    //     console.log("Polygon no: " + this.polygonNumber);
-        
-    //     this.getPolygons();
-        
-    //     //this.parent.forEach(v => v = 0);
-    // }
-
-    // reset() {
-    //     this.type = Array(this.type.length).fill(0);
-    //     this.parent = Array(this.type.length).fill(0);
-    //     this.polygonNumber = 0;
-    //     this.rooms
-    // }
-
-
     getPerimeter() {
         const edgeMap = new Map();
-    
-        // Helper function to normalize wall
-        const normalizeWall = (wall: {
-                wallID?: number; startPoint: any; endPoint: any; wallHeight?: number; linked?: {
-                    startPoint: {
-                        wallID: number;
-                        roomID: number;
-                    }[]; endPoint: {
-                        wallID: number;
-                        roomID: number;
-                    }[];
-                }; roomID?: number[];
-            }) => {
+        const normalizeWall = (wall: { wallID?: number; startPoint: any; endPoint: any; wallHeight?: number; linked?: any; roomID?: number[]; }) => {
             const { startPoint, endPoint } = wall;
-            // Create a consistent representation of the wall regardless of direction
             const key = [
                 [Math.min(startPoint.coordX, endPoint.coordX), Math.min(startPoint.coordY, endPoint.coordY)],
                 [Math.max(startPoint.coordX, endPoint.coordX), Math.max(startPoint.coordY, endPoint.coordY)]
@@ -877,7 +755,6 @@ export class Model {
             return key;
         };
     
-        // Populate edge map with normalized walls
         for (const wallObj of this.roof) {
             const wall = wallObj.wall;
             const key = normalizeWall(wall);
@@ -888,7 +765,6 @@ export class Model {
             }
         }
     
-        // Collect perimeter walls
         const perimeterWalls = [];
         for (const wallObj of this.roof) {
             const wall = wallObj.wall;
@@ -902,51 +778,35 @@ export class Model {
     
     getHousePerimeter() {
         this.perimeter = this.getPerimeter();
-        console.log(this.perimeter);
         this.perimeter1= [];
             this.perimeter.forEach(wall1 => {
-                
                 this.perimeter.forEach(wall2 => { 
-                    wall1.linked.startPoint.forEach(wallLinkedS => {
+                    wall1.linked.startPoint.forEach((wallLinkedS: any) => {
                         if(this.findWallByID(wallLinkedS.wallID)?.wall == wall2) {
                             if(this.perimeter1.indexOf(wall2) == -1) this.perimeter1.push(wall2);
-                            //perimeter.splice(perimeter.indexOf(wall2), 1);
                             return wallLinkedS;
                         }
                     })
                 });
                 if(this.perimeter1.indexOf(wall1) == -1) this.perimeter1.push(wall1);
-                 //   perimeter.splice(perimeter.indexOf(wall1), 1);
                 this.perimeter.forEach(wall2 => { 
-                    wall1.linked.endPoint.forEach(wallLinkedE => {
+                    wall1.linked.endPoint.forEach((wallLinkedE: any) => {
                         if(this.findWallByID(wallLinkedE.wallID)?.wall == wall2) {
                             if(this.perimeter1.indexOf(wall2) == -1) this.perimeter1.push(wall2);
-                            //perimeter.splice(perimeter.indexOf(wall2), 1);
                             return wallLinkedE;
                         }
                     })
-                    
                 })
-               // 
             })
-           // let r = this.fillPerimeter(this.perimeter[0]);
-            //if(r) this.perimeter1 = r;
-        console.log(this.perimeter1);
         return this.perimeter1;
     }
     
     fillPerimeter(wall: {
         wallID: number; startPoint: any; endPoint: any; wallHeight: number; linked: {
-            startPoint: {
-                wallID: number;
-                roomID: number;
-            }[]; endPoint: {
-                wallID: number;
-                roomID: number;
-            }[];
+            startPoint: { wallID: number; roomID: number; }[]; 
+            endPoint: { wallID: number; roomID: number; }[];
         }; roomID: number[];
     }) {
-        console.log("llllll" + this.perimeter1)
         if(this.perimeter1.length == this.perimeter.length) return this.perimeter1;
         else {
             this.perimeter.forEach(wall2 => { 
@@ -957,328 +817,204 @@ export class Model {
                             this.fillPerimeter(wall2);
                             return wall2;
                         }
-                        
-                        //perimeter.splice(perimeter.indexOf(wall2), 1);
-                        //return wallLinkedS;
                     }
                 })
             });
             if(this.perimeter1.indexOf(wall) == -1) this.perimeter1.push(wall);
-                //   perimeter.splice(perimeter.indexOf(wall1), 1);
             this.perimeter.forEach(wall2 => { 
                 wall.linked.endPoint.forEach(wallLinkedE => {
                     if(this.findWallByID(wallLinkedE.wallID)?.wall == wall2) {
                         if(this.perimeter1.indexOf(wall2) == -1) {
                             this.perimeter1.push(wall2);
-                         this.fillPerimeter(wall2);
-                         return wall2;
+                            this.fillPerimeter(wall2);
+                            return wall2;
                         }
-                        //perimeter.splice(perimeter.indexOf(wall2), 1);
-                        //return wallLinkedE;
                     }
                 })
-                
             })
         }
-        
     }
 
-    checkClosedPolygon(firstWall: 
-        {
-            wall: {
-                wallID: number,
-                startPoint: {
-                    coordX: number,
-                    coordY:number
-                }; 
-                endPoint: {
-                    coordX: number, 
-                    coordY:number
-                }; 
-                wallHeight: number,
-                linked: {
-                    startPoint: {
-                        wallID: number,
-                        roomID: number
-                    }[],
-                    endPoint: {
-                        wallID: number,
-                        roomID: number
-                    }[]
-                },
-                roomID: number[]
-            }
-        } | null)
-    {
+    // Add this to Model.ts
+    private splitAndDeduplicateWalls() {
+        let changed = true;
+        // 1. Split walls wherever a corner touches the middle of a line
+        while (changed) {
+            changed = false;
+            let points = new Set<string>();
+            this.walls.forEach(w => {
+                points.add(`${Math.round(w.wall.startPoint.coordX)},${Math.round(w.wall.startPoint.coordY)}`);
+                points.add(`${Math.round(w.wall.endPoint.coordX)},${Math.round(w.wall.endPoint.coordY)}`);
+            });
 
-       // console.log("-------------------------");
-        
-        // console.log("firstWall: " + firstWall?.wall.wallID + " - " + firstWall?.wall.startPoint.coordX + " " + firstWall?.wall.startPoint.coordY + ", "+ firstWall?.wall.endPoint.coordX + " " + firstWall?.wall.endPoint.coordY);
-        this.polygonWalls = []; 
-        let startPoints:{ coordX: number; coordY: number; }[] = [];
-        let endPoints:{ coordX: number; coordY: number; }[] =[];
-        if(firstWall) {
-            startPoints.push(firstWall.wall.startPoint);
-            endPoints.push(firstWall.wall.endPoint);
-            //this.polygonWalls.push(firstWall);
-            this.polygonWalls = [];
-            this.checkWallsLinks(firstWall, startPoints, endPoints);
-            if(firstWall.wall.linked.endPoint.length > 0 && firstWall.wall.linked.startPoint.length > 0) {
-                
-                // new Wall().createRoom(this.wallsToCoords());
-                // console.log("polygon : " + this.polygonWalls);
-                // this.polygonWalls.forEach(wall=> {
-                //     console.log("Wall in final array: " + wall.wall.startPoint.coordX + " " + wall.wall.startPoint.coordY + ", " + wall.wall.endPoint.coordX + " " + wall.wall.endPoint.coordY)
-                // })
-                return this.createRoom(this.polygonWalls);
-            } else {
-                // console.log("not a polygon");
+            for (let i = 0; i < this.walls.length; i++) {
+                let w = this.walls[i];
+                let p1 = w.wall.startPoint;
+                let p2 = w.wall.endPoint;
+
+                for (let ptStr of points) {
+                    let [x, y] = ptStr.split(',').map(Number);
+                    if (this.isPointOnSegment(x, y, p1.coordX, p1.coordY, p2.coordX, p2.coordY)) {
+                        // We found a T-Junction! Split the wall into two pieces.
+                        let newWall = {
+                            wall: {
+                                wallID: this.wallIndex++,
+                                startPoint: { coordX: x, coordY: y },
+                                endPoint: { coordX: p2.coordX, coordY: p2.coordY },
+                                wallHeight: w.wall.wallHeight,
+                                linked: { startPoint: [], endPoint: [] },
+                                roomID: [] 
+                            }
+                        };
+                        w.wall.endPoint = { coordX: x, coordY: y };
+                        this.walls.push(newWall);
+                        changed = true;
+                        break;
+                    }
+                }
+                if (changed) break;
             }
+        }
+
+        // 2. Remove identical duplicates (cleans up shared walls)
+        let uniqueWalls = [];
+        let seen = new Set<string>();
+        for (let w of this.walls) {
+            let p1 = w.wall.startPoint;
+            let p2 = w.wall.endPoint;
+            if (p1.coordX === p2.coordX && p1.coordY === p2.coordY) continue; // Ignore zero-length walls
+
+            let key = [
+                [Math.min(p1.coordX, p2.coordX), Math.min(p1.coordY, p2.coordY)].join(','),
+                [Math.max(p1.coordX, p2.coordX), Math.max(p1.coordY, p2.coordY)].join(',')
+            ].join('|');
+
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniqueWalls.push(w);
+            }
+        }
+        this.walls = uniqueWalls;
+    }
+
+    // Math helper to check if a point lies on a line
+    private isPointOnSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): boolean {
+        let distP1_pt = Math.hypot(px - x1, py - y1);
+        let distPt_P2 = Math.hypot(x2 - px, y2 - py);
+        let distP1_P2 = Math.hypot(x2 - x1, y2 - y1);
+        
+        // Use a 0.1 tolerance for floating point rounding errors
+        if (Math.abs((distP1_pt + distPt_P2) - distP1_P2) < 0.1) {
+            if (distP1_pt > 0.1 && distPt_P2 > 0.1) return true; // Exclude actual endpoints
+        }
+        return false;
+    }
+
+    // CHANGED: Replacing buggy recursion with an efficient planar graph traversal.
+    // This perfectly calculates room formations without crashing.
+    checkClosedPolygon(firstWall: any | null) {
+        if (!firstWall) return -1;
+        this.detectRoomsFromGraph();
+        let wallData = this.findWallByID(firstWall.wall.wallID);
+        if (wallData && wallData.wall.roomID.length > 0) {
+            return wallData.wall.roomID[wallData.wall.roomID.length - 1]; // Return most recently assigned room
         }
         return -1;
     }
 
-    checkDegreeBetweenWalls(wall1: {wall: { wallID: number, startPoint: {coordX: number, coordY: number}; endPoint: {coordX: number, coordY: number}; wallHeight: number, linked: {startPoint: number, endPoint: number}, roomID: number[]}},
-        wall2: {wall: { wallID: number, startPoint: {coordX: number, coordY: number}; endPoint: {coordX: number, coordY: number}; wallHeight: number, linked: {startPoint: number, endPoint: number}}}
-    ) {
-        //distance
-        var wall1X = wall1.wall.endPoint.coordX - wall1.wall.startPoint.coordX;
-        var wall1Y = wall1.wall.endPoint.coordY - wall1.wall.startPoint.coordY;
-        var wall2X = wall2.wall.endPoint.coordX - wall2.wall.startPoint.coordX;
-        var wall2Y = wall2.wall.endPoint.coordY - wall2.wall.startPoint.coordY;
-        var angle = Math.atan2(wall1X * wall2Y - wall1Y * wall2X, wall1X * wall2X + wall1Y * wall2Y);
-        if(angle < 0) {angle = angle * -1;}
-        var degree_angle = 180 - angle * (180 / Math.PI);
-        return degree_angle;
-        //if(degree_angle > 90) return false;
-        //return true;
-    }
+    detectRoomsFromGraph() {
+        // --- ADD THIS HERE! ---
+        // Clean up T-Junctions and Overlaps before running graph math
+        this.splitAndDeduplicateWalls();
 
-    checkWallsLinks(wall: {wall: { wallID: number, startPoint: {coordX: number, coordY: number}; endPoint: {coordX: number, coordY: number}; wallHeight: number, linked: {startPoint: {wallID: number,roomID: number}[], endPoint: {wallID: number,roomID: number}[]}, roomID: number[]}}, 
-        startPoints: { coordX: number; coordY: number; }[], 
-        endPoints: { coordX: number; coordY: number; }[]) 
-        {
-             //console.log("current wall is: " + wall?.wall.startPoint.coordX + " " + wall?.wall.startPoint.coordY + ", "+ wall?.wall.endPoint.coordX + " " + wall?.wall.endPoint.coordY);
+        this.rooms = [];
+        this.roomIndex = 0;
+        this.walls.forEach(w => { w.wall.roomID = []; });
 
-            if(wall.wall.linked.endPoint.length == 0) {
-                this.walls.forEach(wall2 => {
-               //     console.log("-checking " +  + wall2.wall.wallID + " - " + wall2?.wall.startPoint.coordX + " " + wall2?.wall.startPoint.coordY + ", "+ wall2?.wall.endPoint.coordX + " " + wall2?.wall.endPoint.coordY);
-        
-                    if(!this.identicWalls(wall, wall2)) {
-                        if(wall.wall.endPoint.coordX == wall2.wall.startPoint.coordX && wall.wall.endPoint.coordY == wall2.wall.startPoint.coordY){ 
-                            //console.log("Angle is: " + this.checkDegreeBetweenWalls(wall, wall2));
-                            //if(this.checkDegreeBetweenWalls(wall, wall2) <= 90) {
-                            if(wall.wall.roomID.filter(roomID => wall2.wall.roomID.includes(roomID)).length > 0) {// perete comun
-                                endPoints.pop();
-                                wall.wall.linked.endPoint.push({wallID: wall2.wall.wallID, roomID: wall.wall.roomID.filter(roomID => wall2.wall.roomID.includes(roomID))[0]});
-                                wall2.wall.linked.startPoint.push({wallID: wall.wall.wallID, roomID: wall.wall.roomID.filter(roomID => wall2.wall.roomID.includes(roomID))[0]});
-                                if(wall2.wall.linked.endPoint.length == 0) endPoints.push(wall2.wall.endPoint);
-                                this.polygonWalls.push(wall2);
-                                if(wall2.wall.linked.startPoint.length > 0) wall2.wall.linked.startPoint.forEach(sp=> {wall.wall.linked.startPoint.push(sp); 
-                                    let spWall = this.findWallByID(sp.wallID);
-                                    spWall?.wall.linked.endPoint.push({wallID: wall.wall.wallID, roomID: wall.wall.roomID.filter(roomID => !spWall.wall.roomID.includes(roomID))[0] })
-                               }); //-----------
-                                this.checkWallsLinks(wall2, startPoints, endPoints);
-                            } else //if(wall2.wall.linked.startPoint.length > 2 && wall2.wall.linked.endPoint.length > 2) 
-                            {
-                                endPoints.pop();
-                               // wall.wall.linked.endPoint.push({wallID: wall2.wall.wallID, roomID:wall.wall.roomID.filter(roomID => wall2.wall.roomID.includes(roomID))[0]});
-                              //  wall2.wall.linked.startPoint.push({wallID: wall.wall.wallID, roomID:wall.wall.roomID.filter(roomID => wall2.wall.roomID.includes(roomID))[0]});
-                                if(wall2.wall.linked.endPoint.length == 0) endPoints.push(wall2.wall.endPoint);
-                                this.polygonWalls.push(wall2);
-                                if(wall2.wall.linked.startPoint.length > 0) wall2.wall.linked.startPoint.forEach(sp=> {wall.wall.linked.startPoint.push(sp); 
-                                    let spWall = this.findWallByID(sp.wallID);
-                                    spWall?.wall.linked.endPoint.push({wallID: wall.wall.wallID, roomID: wall.wall.roomID.filter(roomID => !spWall.wall.roomID.includes(roomID))[0] })
-                               }); //-----------
-                               // wall2.wall.roomID.push(wall.wall.roomID.filter(roomID => !wall2.wall.roomID.includes(roomID))[0]);
-                                wall.wall.linked.endPoint.push({wallID: wall2.wall.wallID, roomID: wall.wall.roomID.filter(roomID => !wall2.wall.roomID.includes(roomID))[0]})
-                                wall2.wall.linked.startPoint.push({wallID: wall.wall.wallID, roomID: wall.wall.roomID.filter(roomID => !wall2.wall.roomID.includes(roomID))[0]})
+        let edges: any[] = [];
+        let adjacencyList = new Map<string, any[]>();
+        const getPointKey = (x: number, y: number) => `${Math.round(x)},${Math.round(y)}`;
 
-                               // this.checkWallsLinks(wall2, startPoints, endPoints);
-                            }
-                        } else if (wall.wall.endPoint.coordX == wall2.wall.endPoint.coordX && wall.wall.endPoint.coordY == wall2.wall.endPoint.coordY) {
-                           // console.log("Angle is: " + this.checkDegreeBetweenWalls(wall, wall2));
-                            //if(this.checkDegreeBetweenWalls(wall, wall2) <= 90) {
-                                if(wall.wall.roomID.filter(roomID => wall2.wall.roomID.includes(roomID)).length > 0) {// perete comun
-                                    endPoints.pop();
-                                    wall.wall.linked.endPoint.push({wallID: wall2.wall.wallID, roomID:this.roomIndex});
-                                    wall2.wall.linked.endPoint.push({wallID: wall.wall.wallID, roomID: this.roomIndex});
-                                    if(!wall2.wall.linked.startPoint) startPoints.push(wall2.wall.startPoint);
-                                    this.polygonWalls.push(wall2);
-                                    this.checkWallsLinks(wall2, startPoints, endPoints);
-                                } else if(wall2.wall.linked.startPoint.length > 2 && wall2.wall.linked.endPoint.length > 2) {
-                                    endPoints.pop();
-                                   // wall.wall.linked.endPoint.push({wallID: wall2.wall.wallID, roomID:this.roomIndex});
-                                   // wall2.wall.linked.endPoint.push({wallID: wall.wall.wallID, roomID: this.roomIndex});
-                                    if(!wall2.wall.linked.startPoint) startPoints.push(wall2.wall.startPoint);
-                                    this.polygonWalls.push(wall2);
-                                    wall2.wall.roomID.push(wall.wall.roomID.filter(roomID => !wall2.wall.roomID.includes(roomID))[0]);
-                                    wall.wall.linked.endPoint.push({wallID: wall2.wall.wallID, roomID: wall.wall.roomID.filter(roomID => !wall2.wall.roomID.includes(roomID))[0]})
-                                    wall2.wall.linked.startPoint.push({wallID: wall.wall.wallID, roomID: wall.wall.roomID.filter(roomID => !wall2.wall.roomID.includes(roomID))[0]})
-                                    this.checkWallsLinks(wall2, startPoints, endPoints);
-                                }
-                            //}
-                        } else {
-                            // console.log("---not a match1");
+        this.walls.forEach(w => {
+            let p1 = w.wall.startPoint;
+            let p2 = w.wall.endPoint;
+            if (p1.coordX === p2.coordX && p1.coordY === p2.coordY) return;
+
+            let e1 = { wallID: w.wall.wallID, start: p1, end: p2, angle: Math.atan2(p2.coordY - p1.coordY, p2.coordX - p1.coordX), visited: false };
+            let e2 = { wallID: w.wall.wallID, start: p2, end: p1, angle: Math.atan2(p1.coordY - p2.coordY, p1.coordX - p2.coordX), visited: false };
+
+            edges.push(e1, e2);
+            let k1 = getPointKey(p1.coordX, p1.coordY);
+            let k2 = getPointKey(p2.coordX, p2.coordY);
+
+            if (!adjacencyList.has(k1)) adjacencyList.set(k1, []);
+            if (!adjacencyList.has(k2)) adjacencyList.set(k2, []);
+            adjacencyList.get(k1)!.push(e1);
+            adjacencyList.get(k2)!.push(e2);
+        });
+
+        adjacencyList.forEach(outgoing => outgoing.sort((a, b) => a.angle - b.angle));
+
+        let foundRooms: number[][] = [];
+        for (let edge of edges) {
+            if (edge.visited) continue;
+
+            let cycleEdges: any[] = [];
+            let currentEdge = edge;
+
+            while (!currentEdge.visited) {
+                currentEdge.visited = true;
+                cycleEdges.push(currentEdge);
+
+                let nextKey = getPointKey(currentEdge.end.coordX, currentEdge.end.coordY);
+                let outgoing = adjacencyList.get(nextKey)!;
+                let reverseIndex = outgoing.findIndex((o: any) => o.end.coordX === currentEdge.start.coordX && o.end.coordY === currentEdge.start.coordY);
+                let nextIndex = (reverseIndex + 1) % outgoing.length;
+                currentEdge = outgoing[nextIndex];
+            }
+
+            if (currentEdge === edge) {
+                let area = 0;
+                for (let e of cycleEdges) {
+                    area += (e.start.coordX * e.end.coordY) - (e.end.coordX * e.start.coordY);
+                }
+                area = area / 2;
+                
+                if (area > 0) foundRooms.push(cycleEdges.map(e => e.wallID));
+            }
+        }
+
+        foundRooms.forEach(wallIDs => {
+            let newRoomID = this.addToRooms(wallIDs);
+            wallIDs.forEach(id => {
+                let w = this.findWallByID(id);
+                if (w && !w.wall.roomID.includes(newRoomID)) {
+                    w.wall.roomID.push(newRoomID);
+                }
+            });
+        });
+
+        // --- ADD THIS HERE! ---
+        // Dynamically rebuild the user's `linked` arrays to support legacy perimeter methods
+        this.walls.forEach(w => {
+            w.wall.linked = { startPoint: [], endPoint: [] };
+            let sKey = getPointKey(w.wall.startPoint.coordX, w.wall.startPoint.coordY);
+            let eKey = getPointKey(w.wall.endPoint.coordX, w.wall.endPoint.coordY);
+
+            const buildLinks = (key: string, arr: any[]) => {
+                (adjacencyList.get(key) || []).forEach((adjE: any) => {
+                    if (adjE.wallID !== w.wall.wallID) {
+                        let w2 = this.findWallByID(adjE.wallID);
+                        if (w2) {
+                            let sharedRoom = w.wall.roomID.find(id => w2.wall.roomID.includes(id));
+                            arr.push({ wallID: adjE.wallID, roomID: sharedRoom !== undefined ? sharedRoom : -1 });
                         }
-                    } else {
-                        // console.log("--same wall1");
                     }
                 });
-            } else {
-                wall.wall.linked.endPoint.forEach(endPoint=> {
-                    let wall2 = this.findWallByID(endPoint.wallID);
-                    if(wall2) {
-                        if(wall.wall.roomID.includes(endPoint.roomID)) {
-                            // console.log("existent wall " + wall2?.wall.startPoint.coordX + " " + wall2?.wall.startPoint.coordY + ", " + wall2?.wall.endPoint.coordX + " " + wall2?.wall.endPoint.coordY)
-                            if(this.polygonWalls.indexOf(wall2) < 0) {
-                                this.polygonWalls.push(wall2);
-                                this.checkWallsLinks(wall2, startPoints, endPoints);
-                            }
-                        }
-                            if(this.polygonWalls.indexOf(wall2) < 0) {
-                                this.polygonWalls.push(wall2);
-                                wall.wall.linked.endPoint.push({wallID: wall2.wall.wallID, roomID: wall.wall.roomID.filter(roomID => !wall2.wall.roomID.includes(roomID))[0]})
-                                wall2.wall.roomID.push(wall.wall.roomID.filter(roomID => !wall2.wall.roomID.includes(roomID))[0])
-                               // this.checkWallsLinks(wall2, startPoints, endPoints);
-                            }
-
-                    }   
-                
-                })
-                
-            }
-            if(wall.wall.linked.startPoint.length == 0) {
-                this.walls.forEach(wall2 => {
-                    // console.log("-checking " +  + wall2.wall.wallID + " - " + wall2?.wall.startPoint.coordX + " " + wall2?.wall.startPoint.coordY + ", "+ wall2?.wall.endPoint.coordX + " " + wall2?.wall.endPoint.coordY);
-            
-                    if(!this.identicWalls(wall, wall2)) {
-                      //  console.log("--now checking " + wall2?.wall.startPoint.coordX + " " + wall2?.wall.startPoint.coordY + ", "+ wall2?.wall.endPoint.coordX + " " + wall2?.wall.endPoint.coordY+ " === "+ wall?.wall.startPoint.coordX + " " + wall?.wall.startPoint.coordY + ", "+ wall?.wall.endPoint.coordX + " " + wall?.wall.endPoint.coordY)
-
-                        if(wall.wall.startPoint.coordX == wall2.wall.startPoint.coordX && wall.wall.startPoint.coordY == wall2.wall.startPoint.coordY){ 
-                                if(wall.wall.roomID.filter(roomID => wall2.wall.roomID.includes(roomID)).length > 0) {// perete comun
-                                    startPoints.pop();
-                                    wall.wall.linked.startPoint.push({wallID: wall2.wall.wallID, roomID: wall.wall.roomID.filter(roomID => wall2.wall.roomID.includes(roomID))[0]});
-                                    wall2.wall.linked.startPoint.push({wallID: wall.wall.wallID, roomID: wall.wall.roomID.filter(roomID => wall2.wall.roomID.includes(roomID))[0]});
-                                    if(wall2.wall.linked.endPoint.length == 0) startPoints.push(wall2.wall.endPoint);
-                                    this.polygonWalls.push(wall2);
-                                    this.checkWallsLinks(wall2, startPoints, endPoints);
-                                } else //if(wall2.wall.linked.startPoint.length > 2 && wall2.wall.linked.endPoint.length > 2) 
-                                {
-                                    startPoints.pop();
-                                  //  wall.wall.linked.startPoint.push({wallID: wall2.wall.wallID, roomID:wall.wall.roomID.filter(roomID => wall2.wall.roomID.includes(roomID))[0]});
-                                  //  wall2.wall.linked.startPoint.push({wallID: wall.wall.wallID, roomID:wall.wall.roomID.filter(roomID => wall2.wall.roomID.includes(roomID))[0]});
-                                    if(wall2.wall.linked.endPoint.length == 0) startPoints.push(wall2.wall.endPoint);
-                                    this.polygonWalls.push(wall);
-                                   // wall2.wall.roomID.push(wall.wall.roomID.filter(roomID => !wall2.wall.roomID.includes(roomID))[0]);
-                                   if(wall2.wall.linked.startPoint.length > 0) wall2.wall.linked.startPoint.forEach(sp=> {wall.wall.linked.startPoint.push(sp); 
-                                        let spWall = this.findWallByID(sp.wallID);
-                                        spWall?.wall.linked.endPoint.push({wallID: wall.wall.wallID, roomID: wall.wall.roomID.filter(roomID => !spWall.wall.roomID.includes(roomID))[0] })
-                                   }); //-----------
-                                   wall.wall.linked.startPoint.push({wallID: wall2.wall.wallID, roomID: wall.wall.roomID.filter(roomID => !wall2.wall.roomID.includes(roomID))[0]})
-                                    wall2.wall.linked.startPoint.push({wallID: wall.wall.wallID, roomID: wall.wall.roomID.filter(roomID => !wall2.wall.roomID.includes(roomID))[0]})
-    
-                                    this.checkWallsLinks(wall2, startPoints, endPoints);
-                                }
-                        } else if (wall.wall.startPoint.coordX == wall2.wall.endPoint.coordX && wall.wall.startPoint.coordY == wall2.wall.endPoint.coordY) {
-                                if(wall.wall.roomID.filter(roomID => wall2.wall.roomID.includes(roomID)).length > 0) {// perete comun
-                                    startPoints.pop();
-                                    wall.wall.linked.startPoint.push({wallID: wall2.wall.wallID, roomID:this.roomIndex});
-                                    wall2.wall.linked.endPoint.push({wallID: wall.wall.wallID, roomID: this.roomIndex});
-                                    if(wall2.wall.linked.startPoint.length == 0) startPoints.push(wall2.wall.startPoint);
-                                    this.polygonWalls.push(wall2);
-
-                                    if(wall2.wall.linked.startPoint.length > 0) wall2.wall.linked.startPoint.forEach(sp=> {wall.wall.linked.startPoint.push(sp); 
-                                        let spWall = this.findWallByID(sp.wallID);
-                                        spWall?.wall.linked.endPoint.push({wallID: wall.wall.wallID, roomID: wall.wall.roomID.filter(roomID => !spWall.wall.roomID.includes(roomID))[0] })
-                                   }); //-----------
-
-                                    this.checkWallsLinks(wall2, startPoints, endPoints);
-                                } else if(wall2.wall.linked.startPoint.length > 2 && wall2.wall.linked.endPoint.length > 2) {
-                                    startPoints.pop();
-                                    console.log("oh uh");
-                                    // wall.wall.linked.startPoint.push({wallID: wall2.wall.wallID, roomID:this.roomIndex});
-                                    // wall2.wall.linked.endPoint.push({wallID: wall.wall.wallID, roomID: this.roomIndex});
-                                    if(wall2.wall.linked.startPoint.length == 0) startPoints.push(wall2.wall.startPoint);
-                                    this.polygonWalls.push(wall2);
-                                    if(wall2.wall.linked.endPoint.length > 0) wall2.wall.linked.endPoint.forEach(sp=> {wall.wall.linked.startPoint.push(sp); 
-                                        let spWall = this.findWallByID(sp.wallID);
-                                        spWall?.wall.linked.endPoint.push({wallID: wall.wall.wallID, roomID: wall.wall.roomID.filter(roomID => !spWall.wall.roomID.includes(roomID))[0] })
-                                   }); //-----------
-
-                                   // wall2.wall.roomID.push(wall.wall.roomID.filter(roomID => !wall2.wall.roomID.includes(roomID))[0]);
-                                    wall.wall.linked.startPoint.push({wallID: wall2.wall.wallID, roomID: wall.wall.roomID.filter(roomID => !wall2.wall.roomID.includes(roomID))[0]})
-                                    wall2.wall.linked.endPoint.push({wallID: wall.wall.wallID, roomID: wall.wall.roomID.filter(roomID => !wall2.wall.roomID.includes(roomID))[0]})
-                                    this.checkWallsLinks(wall2, startPoints, endPoints);
-                                }
-                        }else {
-                            // console.log("---not a match2");
-                        }
-                    }
-                    else {
-                        // console.log("--same wall2");
-                    }
-                })
-            } else {
-                wall.wall.linked.endPoint.forEach(startPoint => {
-                    let wall2 = this.findWallByID(startPoint.wallID);
-                    if(wall2) {
-                        if(wall.wall.roomID.includes(startPoint.roomID)) {
-                            // console.log("existent wall " + wall2?.wall.startPoint.coordX + " " + wall2?.wall.startPoint.coordY + ", " + wall2?.wall.endPoint.coordX + " " + wall2?.wall.endPoint.coordY)
-                            if(this.polygonWalls.indexOf(wall2) < 0) {
-                                this.polygonWalls.push(wall2);
-                                this.checkWallsLinks(wall2, startPoints, endPoints);
-                            }
-                        }
-                            if(this.polygonWalls.indexOf(wall2) < 0) {
-                                this.polygonWalls.push(wall2);
-                                wall.wall.linked.endPoint.push({wallID: wall2.wall.wallID, roomID: wall.wall.roomID.filter(roomID => !wall2.wall.roomID.includes(roomID))[0]})
-                                wall2.wall.roomID.push(wall.wall.roomID.filter(roomID => !wall2.wall.roomID.includes(roomID))[0])
-                                //this.checkWallsLinks(wall2, startPoints, endPoints);
-                            }
-
-                    }   
-                
-                })
-                
-            }
-        }
-
-    identicWalls(wall1: { 
-        wall: {
-            wallID: number,
-            startPoint: {
-                coordX: number,
-                coordY:number
-            }; 
-            endPoint: {
-                coordX: number, 
-                coordY:number
-            }; 
-            wallHeight: number
-        }
-    }, wall2: { 
-        wall: {
-            wallID: number,
-            startPoint: {
-                coordX: number,
-                coordY:number
-            }; 
-            endPoint: {
-                coordX: number, 
-                coordY:number
-            }; 
-            wallHeight: number
-        }
-    }) {
-        if((wall1.wall.startPoint.coordX == wall2.wall.startPoint.coordX && wall1.wall.startPoint.coordY == wall2.wall.startPoint.coordY 
-            && wall1.wall.endPoint.coordX == wall2.wall.endPoint.coordX && wall1.wall.endPoint.coordY == wall2.wall.endPoint.coordY)
-        || (wall1.wall.startPoint.coordX == wall2.wall.endPoint.coordX && wall1.wall.startPoint.coordY == wall2.wall.endPoint.coordY
-            && wall1.wall.endPoint.coordX == wall2.wall.startPoint.coordX && wall1.wall.endPoint.coordY == wall2.wall.startPoint.coordY)) {
-            // console.log("identical: " +  wall2?.wall.startPoint.coordX + " " + wall2?.wall.startPoint.coordY + ", "+ wall2?.wall.endPoint.coordX + " " + wall2?.wall.endPoint.coordY+ " === "+ wall1?.wall.startPoint.coordX + " " + wall1?.wall.startPoint.coordY + ", "+ wall1?.wall.endPoint.coordX + " " + wall1?.wall.endPoint.coordY);
-            return true;
-        }
-        return false;
+            };
+            buildLinks(sKey, w.wall.linked.startPoint);
+            buildLinks(eKey, w.wall.linked.endPoint);
+        });
     }
 
     toJSON(): string {

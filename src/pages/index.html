@@ -20,10 +20,29 @@
     <!-- Canvas Container (Background) -->
     <div id="content"></div>
 
+    <!-- Floating Controls -->
+    <div style="position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 15px;">
+        <button id="zoomInBtn" class="zoom-btn" title="Zoom In">+</button>
+        <button id="zoomOutBtn" class="zoom-btn" title="Zoom Out">-</button>
+
+        <button id="snapModeBtn" class="zoom-btn" title="Change Snap Mode">
+            <i class="fa-solid fa-table-cells"></i>
+        </button>
+        
+        <button id="screenshotBtn" class="zoom-btn" title="Take Screenshot">
+            <i class="fa-solid fa-camera"></i>
+        </button>
+
+        <button id="exportJsonBtn" class="zoom-btn" title="Export to JSON">
+            <i class="fa-solid fa-file-code"></i>
+        </button>
+    </div>
+
     <!-- Menu Toggle Button (Visible always) -->
     <button type="button" id="openMenu">
         <i class="fa-solid fa-bars"></i>
     </button>
+
 
     <!-- Main Configuration Menu -->
     <div id="configurationMenu">
@@ -31,7 +50,9 @@
         <!-- Import/Export Section -->
         <div class="confButton"><a id="buttonImportFile">Import File</a></div>
         <input type="file" id="fileInput" style="display: none">
-        <div class="confButton"><a id="buttonExportJSON">Export JSON</a></div>
+        <!-- IMPORT CUSTOM FURNITURE -->
+        <div class="confButton"><a id="buttonImportFurniture">Import Furniture</a></div>
+        <input type="file" id="blendFileInput" accept=".blend" style="display: none">
 
         <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 20px;">
 
@@ -41,8 +62,13 @@
             <div class="confButton"><a id="buttonEditGripPoint">Grip Point</a></div>
             <div class="confButton"><a id="buttonEditRoof">Roof</a></div>
             <div class="confButton"><a id="buttonEditWindow">Window</a></div>
+            <div class="confButton"><a id="buttonEditFurniture">Furniture</a></div>
             <div class="confButton"><a id="buttonEditDoor">Door</a></div>
         </div>
+        <div id="furnitureMenu" style="display:none; padding-left: 20px;">
+            <!-- Auto-generated furniture buttons will appear here -->
+        </div>
+
 
         <!-- Materials Section -->
         <div class="confButton"><a id="buttonMaterials">Materials</a></div>
@@ -94,6 +120,9 @@
 
         <!-- Designer Trigger -->
         <div class="confButton"><a id="openDesignerButton">House Designer</a></div>
+        <div class="confButton">
+            <a id="btnAutoFurniture">Auto-Fill Furniture</a>
+        </div>
     </div>
 
     <!-- Options Menu (Slide-over for textures/details) -->
@@ -109,8 +138,20 @@
         <!-- Static sliders removed to prevent duplicates -->
         <div id="textureContainer"></div>
     </div>
+    <div id="furnitureMenuPanel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="text-white m-0">Furniture</h4>
+            <button class="btn btn-sm btn-outline-light" id="closeFurnitureMenu">
+                <i class="fa-solid fa-xmark"></i> Close
+            </button>
+        </div>
 
-    <!-- Designer Modal -->
+        <div id="furnitureContainer" class="container-fluid"></div>
+    </div>
+
+
+
+    <!-- Designer Modal 
     <div class="modal fade" id="designerModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -120,7 +161,7 @@
                         id="closeDesigner"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- Dimensions -->
+                
                     <h6 class="fw-bold mb-2">Dimensions (cm)</h6>
                     <div class="row g-2 mb-4">
                         <div class="col">
@@ -139,7 +180,7 @@
                         </div>
                     </div>
 
-                    <!-- Layout Options -->
+                   
                     <h6 class="fw-bold mb-2">Layout Options</h6>
                     <div class="d-grid gap-2 mb-4">
                         <button type="button" class="btn btn-outline-dark w-100" id="buttonOpenSpace">Open Space:
@@ -148,7 +189,6 @@
                             OFF</button>
                     </div>
 
-                    <!-- Room Counts (With Labels) -->
                     <h6 class="fw-bold mb-2">Bedrooms</h6>
                     <div class="btn-group w-100 mb-3" role="group" aria-label="Bedroom Selection">
                         <button type="button" class="btn btn-outline-primary active" id="button1Bed">1</button>
@@ -167,6 +207,122 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-primary" id="buttonGenerate"
                         data-bs-dismiss="modal">Generate</button>
+                </div>
+            </div>
+        </div>
+    </div> -->
+
+
+    <!-- Procedural Generator Modal -->
+    <div class="modal fade" id="designerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">House Plan Generator</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="closeDesigner"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Basic Dimensions -->
+                    <h6 class="fw-bold mb-2">House Dimensions (Units)</h6>
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <div class="form-floating">
+                                <input type="number" class="form-control" id="genWidth" placeholder="800" value="800" min="200">
+                                <label for="genWidth">Total Width</label>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-floating">
+                                <input type="number" class="form-control" id="genHeight" placeholder="600" value="600" min="200">
+                                <label for="genHeight">Total Height</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Room Count -->
+                     <h6 class="fw-bold mb-2">No. of Rooms</h6>
+                    <div class="form-floating mb-4">
+                        <input type="number" class="form-control" id="genRooms" placeholder="4" value="4" min="2">
+                        <label for="genRooms">Number of Rooms</label>
+                    </div>
+                    <!-- NEW: Specific Rooms -->
+                    <h6 class="fw-bold mb-2">Mandatory Rooms</h6>
+                    <div class="row g-2 mb-4">
+                        <div class="col">
+                            <div class="form-floating">
+                                <input type="number" class="form-control" id="genBedrooms" placeholder="2" value="2" min="1">
+                                <label for="genBedrooms">Bedrooms</label>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-floating">
+                                <input type="number" class="form-control" id="genBathrooms" placeholder="1" value="1" min="1">
+                                <label for="genBathrooms">Bathrooms</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p class="text-muted" style="font-size: 0.8em; margin-top:-10px;">
+                        *1 Living Room and 1 Kitchen are always included.
+                    </p>
+
+                    <!-- Advanced Settings Toggle -->
+                    <button class="btn btn-outline-secondary btn-sm w-100 mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#advancedSettings" aria-expanded="false" aria-controls="advancedSettings">
+                        <i class="fa-solid fa-gear"></i> Advanced Settings
+                    </button>
+
+                    <!-- Advanced Settings Collapse -->
+                    <div class="collapse" id="advancedSettings">
+                        <div class="card card-body bg-light">
+                            <h6 class="fw-bold mb-2" style="font-size: 0.9em;">Room Size Limits</h6>
+                            <div class="row g-2 mb-3">
+                                <div class="col">
+                                    <div class="form-floating">
+                                        <input type="number" class="form-control form-control-sm" id="genMinRoomSize" placeholder="80" value="80">
+                                        <label for="genMinRoomSize">Min Size</label>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="form-floating">
+                                        <input type="number" class="form-control form-control-sm" id="genMaxRoomSize" placeholder="200" value="200">
+                                        <label for="genMaxRoomSize">Max Size</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h6 class="fw-bold mb-2" style="font-size: 0.9em;">Generation Probabilities (0.0 to 1.0)</h6>
+                            <div class="row g-2">
+                                <div class="col">
+                                    <label for="genWindowProb" class="form-label mb-0" style="font-size: 0.8em;">Window Chance</label>
+                                    <input type="number" class="form-control form-control-sm" id="genWindowProb" value="0.8" min="0" max="1" step="0.1">
+                                </div>
+                                <div class="col">
+                                    <label for="genDoorProb" class="form-label mb-0" style="font-size: 0.8em;">Extra Door Chance</label>
+                                    <input type="number" class="form-control form-control-sm" id="genDoorProb" value="0.2" min="0" max="1" step="0.1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="buttonGenerate" data-bs-dismiss="modal">Generate</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blender Loading Modal -->
+    <div class="modal fade" id="blenderLoadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-center py-4">
+                <div class="modal-body">
+                    <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5 class="fw-bold">Processing 3D Model...</h5>
+                    <p class="text-muted mb-0">Running Blender in the background. This may take a few seconds.</p>
                 </div>
             </div>
         </div>

@@ -17,6 +17,10 @@ export class Renderer {
 
   }
 
+  getInfo(){
+    return this.renderer.info;
+  }
+
   addObject(obj: THREE.Object3D) {
     this.house.add(obj);
   }
