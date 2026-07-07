@@ -1,0 +1,296 @@
+:root {
+  --primary-bg: rgb(45, 73, 105);
+  --secondary-bg: rgb(30, 53, 78);
+  --accent-color: rgb(79, 161, 255);
+  --sidebar-width: 350px;
+  --button-height: 50px;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Prevent scrolling of the whole page */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #FAEBD7; /* Fallback color */
+}
+
+/* --- CANVAS CONTAINER --- */
+#content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+}
+
+#canvas2D, #canvas3D {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* --- MENU TOGGLE BUTTON (Floating Top Left) --- */
+#openMenu {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--primary-bg);
+  border: 2px solid var(--accent-color);
+  color: white;
+  z-index: 100;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease, background 0.3s;
+}
+
+#openMenu:hover {
+  transform: scale(1.1);
+  background: var(--secondary-bg);
+}
+
+#openMenu i {
+  font-size: 24px;
+}
+
+/* --- ZOOM BUTTONS (Matches #openMenu style) --- */
+.zoom-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--primary-bg);
+  border: 2px solid var(--accent-color);
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease, background 0.3s;
+  font-weight: bold;
+  font-size: 28px;
+  padding: 0;
+  line-height: 1; /* Keeps the + and - perfectly vertically centered */
+}
+
+.zoom-btn:hover {
+  transform: scale(1.1);
+  background: var(--secondary-bg);
+}
+
+#furnitureMenuPanel {
+    position: fixed;
+    top: 0;
+    right: -400px;
+    width: 350px;
+    height: 100%;
+    background: rgba(45, 73, 105, 0.95);
+    padding: 20px;
+    z-index: 200;
+    overflow-y: auto;
+    transition: right 0.3s ease;
+}
+
+#furnitureMenuPanel.is-active {
+    right: 0;
+}
+
+/* Grid layout */
+#furnitureContainer {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+/* Square icon buttons */
+.furniture-item {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.furniture-item:hover {
+    background: rgba(255,255,255,0.15);
+}
+
+.furniture-item.active {
+    background: rgba(255,255,255,0.25);
+}
+
+.furniture-item img {
+    width: 70%;
+    height: 70%;
+    object-fit: contain;
+}
+
+
+
+/* --- MAIN CONFIGURATION MENU --- */
+#configurationMenu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: var(--sidebar-width);
+  background-color: var(--primary-bg);
+  /* Glassmorphism effect */
+  background: rgba(45, 73, 105, 0.95);
+  backdrop-filter: blur(10px);
+  
+  transform: translateX(-100%); /* Hidden by default */
+  transition: transform 0.3s ease-in-out;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  padding-top: 100px; /* Space for the toggle button */
+  padding-bottom: 20px;
+  overflow-y: auto;
+  box-shadow: 4px 0 15px rgba(0,0,0,0.5);
+}
+
+#configurationMenu.is-active {
+  transform: translateX(0);
+}
+
+/* --- SECONDARY OPTIONS MENU (Materials) --- */
+#optionsMenu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: var(--sidebar-width);
+  background-color: var(--secondary-bg);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-in-out;
+  z-index: 60; /* Higher than config menu */
+  padding: 80px 20px 20px 20px;
+  overflow-y: auto;
+  box-shadow: 4px 0 15px rgba(0,0,0,0.5);
+}
+
+#optionsMenu.is-active {
+  transform: translateX(0);
+  /* On very wide screens, you might want this: transform: translateX(var(--sidebar-width)); */
+}
+
+/* --- BUTTON STYLES --- */
+.confButton {
+  position: relative;
+  width: 100%;
+  margin: 10px 0;
+  padding: 0 15px; /* Internal spacing */
+  box-sizing: border-box;
+}
+
+.confButton a {
+  display: flex;
+  justify-content: space-between; /* Icon on right, text on left */
+  align-items: center;
+  width: 100%;
+  padding: 15px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 1rem;
+  border-left: 4px solid transparent;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border-radius: 4px; /* Slight rounded corners */
+}
+
+.confButton a:hover, .confButton a.active {
+  background: rgba(255, 255, 255, 0.2);
+  border-left: 4px solid var(--accent-color);
+  padding-left: 25px; /* Slide effect */
+  color: var(--accent-color);
+}
+
+/* Icon alignment fix */
+.confButton i {
+  margin-left: 10px;
+}
+
+/* --- SUB-MENUS (Edit/Material toggle sections) --- */
+#editMenu, #materialMenu {
+  display: none;
+  background: rgba(0, 0, 0, 0.2);
+  margin: 0 10px;
+  border-radius: 5px;
+  padding: 10px 0;
+}
+
+/* --- PHOTO/TEXTURE GRID --- */
+.photo-wrapper {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.photo-wrapper:hover {
+  transform: scale(1.05);
+  z-index: 2;
+}
+.photo {
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  border: 2px solid transparent;
+}
+.photo:hover {
+  border-color: var(--accent-color);
+}
+
+/* --- SLIDERS --- */
+input[type="range"] {
+  width: 100%;
+  margin: 10px 0;
+  cursor: pointer;
+}
+label {
+  color: white;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+/* --- MODAL --- */
+.modal {
+  background-color: rgba(0,0,0,0.6);
+  z-index: 2000; /* Highest */
+}
+
+.modal-content {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+/* --- RESPONSIVE ADJUSTMENTS --- */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 85%; /* Menu takes almost full screen on mobile */
+  }
+  
+  #openMenu {
+    width: 50px;
+    height: 50px;
+    top: 15px;
+    left: 15px;
+  }
+  
+  .confButton a {
+    font-size: 1.1rem; /* Larger text for touch */
+    padding: 18px;
+  }
+}
